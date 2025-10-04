@@ -1,54 +1,243 @@
 # ActivityPub Relay
 
-This is a simple ActivityPub relay server built with Bun and TypeScript.
+[English](#english) | [日本語](#日本語)
 
-## Prerequisites
+---
 
-- [Bun](https://bun.sh/)
+<a name="日本語"></a>
 
-## Getting Started
+[Hono](https://hono.dev/)、TypeScript、Cloudflare Workersで構築されたシンプルなActivityPubリレーサーバーです。
 
-### 1. Install Dependencies
+## 前提条件
 
-First, install the project dependencies using Bun:
+- [Cloudflareアカウント](https://cloudflare.com/) - Workersへのデプロイ用
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) - Cloudflare Workers CLI（開発依存としてインストール済み）
 
-```bash
-bun install
-```
+## 機能
 
-### 2. Configure Environment Variables
+- **ActivityPubプロトコルサポート**: コアとなるActivityPubリレー機能を実装
+- **HTTP署名検証**: セキュリティのため、受信するアクティビティの署名を検証
+- **アクティビティタイプ**: Follow、Undo、Create、Announceアクティビティに対応
+- **Cloudflare D1**: フォロワーの関係性を保存するためのD1データベースを使用
+- **WebFinger & NodeInfo**: フェデレーション検出のための`.well-known`エンドポイントを実装
 
-Next, you need to set up your environment variables. Copy the example file to a new `.env` file:
+## セットアップ
 
-```bash
-cp .env.example .env
-```
+### 1. 依存関係のインストール
 
-Now, open the `.env` file and fill in the required values:
-
-- `HOSTNAME`: The hostname of your server (e.g., `relay.example.com`).
-- `PUBLICKEY`: Your actor's public key. You can generate a key pair using OpenSSL:
-  ```bash
-  # Generate a private key
-  openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-  # Extract the public key
-  openssl rsa -pubout -in private_key.pem -out public_key.pem
-  ```
-  Then, copy the content of `public_key.pem` into the `PUBLICKEY` variable.
-- `DB_FILE`: The path where the SQLite database file will be stored (e.g., `./data/db.sqlite3`). Make sure the directory exists.
-
-### 3. Run the Server
-
-Once your environment is configured, you can start the server:
+プロジェクトの依存関係をインストールします:
 
 ```bash
-bun run start
+pnpm install
 ```
 
-For development, you can use the `dev` script to automatically restart the server on file changes:
+### 2. キーの生成
+
+ActivityPubアクティビティの署名用にRSAキーペアを生成します:
 
 ```bash
-bun run dev
+# 秘密鍵を生成
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+
+# 公開鍵を抽出
+openssl rsa -pubout -in private_key.pem -out public_key.pem
 ```
 
-The server will be running at `http://0.0.0.0:3000`.
+### 3. wrangler.tomlの設定
+
+`wrangler.toml`を編集して、環境変数とD1データベースを設定します:
+
+```toml
+[vars]
+HOSTNAME = "relay.example.com"  # リレーのドメイン
+PUBLICKEY = "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+PRIVATEKEY = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "activitypub-relay"
+database_id = "your-database-id"
+```
+
+**注意**: ローカル開発のシークレットには`.dev.vars`も使用できます。
+
+### 4. D1データベースの作成
+
+リレー用のD1データベースを作成します:
+
+```bash
+# データベースを作成
+npx wrangler d1 create activitypub-relay
+
+# 出力されたdatabase_idをwrangler.tomlにコピー
+```
+
+データベーススキーマを初期化します（必要に応じてマイグレーションの作成やSQLコマンドの実行を行ってください）。
+
+### 5. ローカル実行
+
+開発サーバーを起動します:
+
+```bash
+pnpm run dev
+```
+
+サーバーはホットリロードを有効にしてローカルで実行されます。
+
+### 6. Cloudflare Workersへのデプロイ
+
+リレーをCloudflare Workersにデプロイします:
+
+```bash
+pnpm run deploy
+```
+
+## APIエンドポイント
+
+- `POST /inbox` - ActivityPubアクティビティを受信
+- `GET /actor` - アクター情報エンドポイント
+- `GET /.well-known/webfinger` - アクター検出用のWebFingerエンドポイント
+- `GET /.well-known/nodeinfo` - NodeInfo検出エンドポイント
+- `GET /nodeinfo/2.1.json` - NodeInfo 2.1メタデータ
+- `GET /.well-known/host-meta` - ホストメタデータエンドポイント
+
+## 開発
+
+### コード品質
+
+プロジェクトではBiomeをリントとフォーマットに使用しています:
+
+```bash
+# コードをチェック
+pnpm run check
+
+# 問題を自動修正
+pnpm run fix
+
+# unsafe fixを含めて修正
+pnpm run fix-unsafe
+```
+
+## ライセンス
+
+詳細はLICENSEファイルを参照してください。
+
+---
+
+## English
+
+A simple ActivityPub relay server built with [Hono](https://hono.dev/), TypeScript, and Cloudflare Workers.
+
+### Prerequisites
+
+- [Cloudflare account](https://cloudflare.com/) - For deploying to Workers
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) - Cloudflare Workers CLI (installed as dev dependency)
+
+### Features
+
+- **ActivityPub Protocol Support**: Implements core ActivityPub relay functionality
+- **HTTP Signature Verification**: Verifies incoming activity signatures for security
+- **Activity Types**: Supports Follow, Undo, Create, and Announce activities
+- **Cloudflare D1**: Uses D1 database for storing follower relationships
+- **WebFinger & NodeInfo**: Implements `.well-known` endpoints for federation discovery
+
+### Getting Started
+
+#### 1. Install Dependencies
+
+Install the project dependencies:
+
+```bash
+pnpm install
+```
+
+#### 2. Generate Keys
+
+Generate an RSA key pair for signing ActivityPub activities:
+
+```bash
+# Generate a private key
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+
+# Extract the public key
+openssl rsa -pubout -in private_key.pem -out public_key.pem
+```
+
+#### 3. Configure wrangler.toml
+
+Edit `wrangler.toml` to set up your environment variables and D1 database:
+
+```toml
+[vars]
+HOSTNAME = "relay.example.com"  # Your relay domain
+PUBLICKEY = "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+PRIVATEKEY = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "activitypub-relay"
+database_id = "your-database-id"
+```
+
+**Note**: You can also use `.dev.vars` for local development secrets.
+
+#### 4. Create D1 Database
+
+Create a D1 database for your relay:
+
+```bash
+# Create the database
+npx wrangler d1 create activitypub-relay
+
+# Copy the database_id from the output to wrangler.toml
+```
+
+Initialize the database schema (create a migration or execute SQL commands as needed).
+
+#### 5. Run Locally
+
+Start the development server:
+
+```bash
+pnpm run dev
+```
+
+The server will be running locally with hot-reload enabled.
+
+#### 6. Deploy to Cloudflare Workers
+
+Deploy your relay to Cloudflare Workers:
+
+```bash
+pnpm run deploy
+```
+
+### API Endpoints
+
+- `POST /inbox` - Receive ActivityPub activities
+- `GET /actor` - Actor information endpoint
+- `GET /.well-known/webfinger` - WebFinger endpoint for actor discovery
+- `GET /.well-known/nodeinfo` - NodeInfo discovery endpoint
+- `GET /nodeinfo/2.1.json` - NodeInfo 2.1 metadata
+- `GET /.well-known/host-meta` - Host metadata endpoint
+
+### Development
+
+#### Code Quality
+
+The project uses Biome for linting and formatting:
+
+```bash
+# Check code
+pnpm run check
+
+# Fix issues automatically
+pnpm run fix
+
+# Fix issues including unsafe fixes
+pnpm run fix-unsafe
+```
+
+### License
+
+See LICENSE file for details.
