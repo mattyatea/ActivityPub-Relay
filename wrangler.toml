@@ -1,6 +1,7 @@
 name = "activitypub-relay"
 main = "src/server.ts"
-compatibility_date = "2024-10-04"
+compatibility_date = "2025-09-15"
+compatibility_flags = [ "nodejs_compat" ]
 
 # This is the D1 database binding.
 # You'll need to create a D1 database named "relay-db" in your Cloudflare account.
