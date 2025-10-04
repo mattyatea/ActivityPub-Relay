@@ -23,3 +23,6 @@ database.db
 # Wrangler
 .wrangler/
 worker-configuration.d.ts
+/.dev.vars
+/private_key.pem
+/public_key.pem
