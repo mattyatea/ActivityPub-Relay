@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Enable latest features
     "lib": ["ESNext", "DOM"],
-    "types": ["bun"],
+    "types": ["@cloudflare/workers-types"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",

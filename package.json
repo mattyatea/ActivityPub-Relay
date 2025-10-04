@@ -3,10 +3,14 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"start": "bun run src/server.ts",
-		"dev": "bun --watch run src/server.ts"
+		"dev": "wrangler dev src/server.ts",
+		"deploy": "wrangler deploy --minify src/server.ts"
+	},
+	"dependencies": {
+		"hono": "^4.5.3"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20240725.0",
 		"@eslint/js": "^9.8.0",
 		"@types/eslint": "^9.6.0",
 		"@typescript-eslint/eslint-plugin": "^8.0.1",
@@ -21,8 +25,8 @@
 		"globals": "^15.9.0",
 		"prettier": "^3.3.3",
 		"typescript": "^5.5.4",
-		"@types/bun": "latest",
-		"typescript-eslint": "^8.0.1"
+		"typescript-eslint": "^8.0.1",
+		"wrangler": "^3.67.1"
 	},
 	"type": "module"
 }
