@@ -1,6 +1,6 @@
 import { createHash, createSign, createVerify } from 'node:crypto';
 import type { Bindings } from '@/server.ts';
-import type { APActor } from '@/types/activityPubTypes.ts';
+import { fetchActor } from '@/utils/activityPub.ts';
 
 export function parseHeader(request: Request): { [key: string]: string } {
 	const signatureHeader = request.headers.get('Signature');
@@ -42,32 +42,6 @@ export function parseHeader(request: Request): { [key: string]: string } {
 	});
 
 	return params;
-}
-
-export async function fetchActor(keyId: string): Promise<APActor> {
-	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
-	const response = await fetch(actorUrl, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/activity+json, application/ld+json',
-		},
-	});
-
-	if (!response.ok) {
-		throw new Error(`Failed to fetch actor: ${response.status}`);
-	}
-
-	const reader = response.body?.getReader();
-	const decoder = new TextDecoder('utf-8');
-	let result = '';
-	if (reader) {
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			result += decoder.decode(value, { stream: true });
-		}
-	}
-	return JSON.parse(result);
 }
 
 export async function signature() {}

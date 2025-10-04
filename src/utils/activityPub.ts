@@ -1,5 +1,5 @@
 import type { Bindings } from '@/server.ts';
-import type { APRequest } from '@/types/activityPubTypes.ts';
+import type { APActor, APRequest } from '@/types/activityPubTypes.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 
 const PUBLIC_COLLECTION = 'https://www.w3.org/ns/activitystreams#Public';
@@ -99,18 +99,29 @@ export async function acceptFollow(
 	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
 	await sendActivity(targetInbox, body, headers);
 }
-/*
-export async function follow(x: APActor) {
-    const numId = Math.floor(Date.now() / 1000);
-    const strInbox = x.inbox;
-    const body: APRequest = {
-        "@context": ["https://www.w3.org/ns/activitystreams"],
-        id: `https://${process.env.HOSTNAME}/activity/${numId}`,
-        type: "Follow",
-        actor: "https://" + process.env.HOSTNAME + "/actor",
-        object: x.id,
-    };
-    const headers = signHeaders(JSON.stringify(body), strInbox);
-    await sendActivity(strInbox, body, headers);
+
+export async function fetchActor(keyId: string): Promise<APActor> {
+	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
+	const response = await fetch(actorUrl, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/activity+json, application/ld+json',
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to fetch actor: ${response.status}`);
+	}
+
+	const reader = response.body?.getReader();
+	const decoder = new TextDecoder('utf-8');
+	let result = '';
+	if (reader) {
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			result += decoder.decode(value, { stream: true });
+		}
+	}
+	return JSON.parse(result);
 }
-*/

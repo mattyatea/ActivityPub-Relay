@@ -3,11 +3,8 @@ import { followActivity } from '@/activity/follow.ts';
 import { relayActivity } from '@/activity/relay.ts';
 import { undoActivity } from '@/activity/undo.ts';
 import type { APRequest } from '@/types/activityPubTypes';
-import {
-	fetchActor,
-	parseHeader,
-	verifySignature,
-} from '@/utils/httpSignature';
+import { fetchActor } from '@/utils/activityPub.ts';
+import { parseHeader, verifySignature } from '@/utils/httpSignature';
 
 export type Bindings = {
 	DB: D1Database;

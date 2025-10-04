@@ -1,8 +1,7 @@
 import type { Context } from 'hono';
 import type { Bindings } from '@/server.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
-import { acceptFollow, checkPublicCollection } from '@/utils/activityPub.ts';
-import { fetchActor } from '@/utils/httpSignature.ts';
+import {acceptFollow, checkPublicCollection, fetchActor} from '@/utils/activityPub.ts';
 
 /**
  * Follow Activityを処理する
