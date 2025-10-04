@@ -102,8 +102,11 @@ app.get('/.well-known/host-meta', (c) => {
 
 // Inbox endpoint for receiving activities
 app.post('/inbox', async (c) => {
-  const activity: APRequest = await c.req.json();
+  // Clone the request to safely read the body, as it can only be read once.
+  const reqClone = c.req.raw.clone();
+  const activity: APRequest = await reqClone.json();
 
+  // Pass the original request to verifySignature. Cloning is a precaution.
   if (!await verifySignature(c.req.raw)) {
     return c.text("Unauthorized: Signature verification failed", 401);
   }
@@ -115,12 +118,12 @@ app.post('/inbox', async (c) => {
   if (activity.type === "Follow") {
     if (await checkPublicCollection(activity)) {
       const { results: actorExists } = await c.env.DB.prepare("SELECT id FROM actors WHERE id = ?").bind(activity.actor).all();
-      if (actorExists.length === 0) {
+      if (!actorExists || actorExists.length === 0) {
         await c.env.DB.prepare("INSERT INTO actors (id, publicKey) VALUES (?, ?)").bind(activity.actor, actor.publicKey.publicKeyPem).run();
       }
 
       const { results: followRequestExists } = await c.env.DB.prepare("SELECT id FROM followRequest WHERE id = ?").bind(activity.id).all();
-      if (followRequestExists.length === 0) {
+      if (!followRequestExists || followRequestExists.length === 0) {
         await c.env.DB.prepare("INSERT INTO followRequest (id, actor, object) VALUES (?, ?, ?)")
           .bind(activity.id, activity.actor, typeof activity.object === 'string' ? activity.object : activity.object.id)
           .run();
@@ -135,6 +138,7 @@ app.post('/inbox', async (c) => {
   if (activity.type === "Undo") {
     const followActivityId = typeof activity.object !== "string" ? activity.object?.id : activity.object;
     if (followActivityId) {
+      // Use the D1 binding from the context to perform the delete operations.
       await c.env.DB.prepare("DELETE FROM followRequest WHERE id = ?").bind(followActivityId).run();
       await c.env.DB.prepare("DELETE FROM actors WHERE id = ?").bind(activity.actor).run();
     }
