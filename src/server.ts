@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { APRequest } from '@/types/activityPubTypes';
-import { acceptFollow, checkPublicCollection } from '@/utils/activityPub';
-import { parseHeader, fetchActor, verifySignature } from '@/utils/httpSignature';
+import { acceptFollow, checkPublicCollection, sendActivity } from '@/utils/activityPub';
+import { parseHeader, fetchActor, verifySignature, signHeaders } from '@/utils/httpSignature';
 
 // Define the type for our environment bindings.
 // This will be used by Hono to type `c.env`.
@@ -116,20 +116,37 @@ app.post('/inbox', async (c) => {
   const actor = await fetchActor(keyId);
 
   if (activity.type === "Follow") {
-    if (await checkPublicCollection(activity)) {
+    if (checkPublicCollection(activity)) {
+      let followerRecord = actor;
+      if (actor.id !== activity.actor) {
+        followerRecord = await fetchActor(activity.actor);
+      }
+
       const { results: actorExists } = await c.env.DB.prepare("SELECT id FROM actors WHERE id = ?").bind(activity.actor).all();
       if (!actorExists || actorExists.length === 0) {
-        await c.env.DB.prepare("INSERT INTO actors (id, publicKey) VALUES (?, ?)").bind(activity.actor, actor.publicKey.publicKeyPem).run();
+        await c.env.DB.prepare("INSERT INTO actors (id, inbox, sharedInbox, publicKey) VALUES (?, ?, ?, ?)")
+          .bind(activity.actor, followerRecord.inbox, followerRecord.endpoints?.sharedInbox ?? null, followerRecord.publicKey?.publicKeyPem ?? null)
+          .run();
+      } else {
+        await c.env.DB.prepare("UPDATE actors SET inbox = ?, sharedInbox = ?, publicKey = ? WHERE id = ?")
+          .bind(followerRecord.inbox, followerRecord.endpoints?.sharedInbox ?? null, followerRecord.publicKey?.publicKeyPem ?? null, activity.actor)
+          .run();
       }
 
       const { results: followRequestExists } = await c.env.DB.prepare("SELECT id FROM followRequest WHERE id = ?").bind(activity.id).all();
       if (!followRequestExists || followRequestExists.length === 0) {
+        const followObjectId = typeof activity.object === 'string' ? activity.object : activity.object?.id ?? null;
         await c.env.DB.prepare("INSERT INTO followRequest (id, actor, object) VALUES (?, ?, ?)")
-          .bind(activity.id, activity.actor, typeof activity.object === 'string' ? activity.object : activity.object.id)
+          .bind(activity.id, activity.actor, followObjectId)
           .run();
       }
 
-      await acceptFollow(activity, actor.inbox, c.env);
+      try {
+        await acceptFollow(activity, followerRecord.inbox, c.env);
+      } catch (error) {
+        console.error("Failed to send Accept response", error);
+        return c.text("Bad Gateway: Failed to deliver Accept", 502);
+      }
       return c.text("Accepted", 202);
     }
     return c.text("Bad Request: Follow must be for the public collection", 400);
@@ -143,6 +160,54 @@ app.post('/inbox', async (c) => {
       await c.env.DB.prepare("DELETE FROM actors WHERE id = ?").bind(activity.actor).run();
     }
     return c.text("OK", 200);
+  }
+
+  if (activity.type === "Create" || activity.type === "Announce") {
+    if (!checkPublicCollection(activity)) {
+      return c.text("Accepted: Activity is not public", 202);
+    }
+
+    const { results: followers } = await c.env.DB.prepare("SELECT id, inbox, sharedInbox FROM actors").all<{
+      id: string;
+      inbox: string;
+      sharedInbox: string | null;
+    }>();
+
+    if (!followers || followers.length === 0) {
+      return c.text("Accepted: No followers registered", 202);
+    }
+
+    const safeHostname = (value: string) => {
+      try {
+        return new URL(value).hostname;
+      } catch {
+        return null;
+      }
+    };
+
+    const originHost = safeHostname(activity.actor);
+    const recipients = followers.filter((follower) => {
+      if (!originHost) return true;
+      const followerHost = safeHostname(follower.id);
+      return followerHost !== originHost;
+    });
+
+    if (recipients.length === 0) {
+      return c.text("Accepted: No recipients after filtering", 202);
+    }
+
+    const deliveries = await Promise.allSettled(recipients.map(async (follower) => {
+      const inbox = follower.sharedInbox ?? follower.inbox;
+      const headers = signHeaders(JSON.stringify(activity), inbox, c.env);
+      await sendActivity(inbox, activity, headers);
+    }));
+
+    const failures = deliveries.filter((result) => result.status === "rejected");
+    if (failures.length > 0) {
+      console.warn(`Failed to relay activity ${activity.id} to ${failures.length} follower(s)`, failures);
+    }
+
+    return c.text(`Accepted: Relayed to ${deliveries.length - failures.length} follower(s)`, 202);
   }
 
   return c.text("Not Implemented: Activity type not handled", 501);
