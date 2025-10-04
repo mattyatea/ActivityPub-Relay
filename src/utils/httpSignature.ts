@@ -44,7 +44,8 @@ export function parseHeader(request: Request): { [key: string]: string } {
 }
 
 export async function fetchActor(keyId: string): Promise<APActor> {
-    const response = await fetch(keyId, {
+    const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
+    const response = await fetch(actorUrl, {
         method: 'GET',
         headers: {
             'Accept': 'application/activity+json, application/ld+json'
@@ -80,7 +81,10 @@ export async function verifySignature(req: Request) {
     const headers = header["headers"].split(" ");
 
     const actor = await fetchActor(keyId);
-    const publicKey = actor.publicKey.publicKeyPem;
+    const publicKey = actor.publicKey?.publicKeyPem;
+    if (!publicKey) {
+        throw new Error('Actor public key missing');
+    }
 
     let signingString = "";
     headers.forEach((headerName) => {

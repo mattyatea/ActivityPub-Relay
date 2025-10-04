@@ -1,6 +1,8 @@
 -- Create the actors table
 CREATE TABLE IF NOT EXISTS actors (
   id TEXT PRIMARY KEY,
+  inbox TEXT NOT NULL,
+  sharedInbox TEXT,
   publicKey TEXT
 );
 
