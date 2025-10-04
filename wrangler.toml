@@ -10,7 +10,8 @@ compatibility_flags = [ "nodejs_compat" ]
 # The binding "DB" will be available in your Worker on `env.DB`.
 [[d1_databases]]
 binding = "DB"
-database_name = "relay-db"
-database_id = ""
-preview_database_id = ""
-migrations_dir = "migrations"
+database_name = "relay"
+database_id = "0c4a4930-3e25-465a-a322-775bb61eed84"
+
+[observability.logs]
+enabled = true
