@@ -19,3 +19,7 @@ vite.config.ts.timestamp-*
 database.db
 
 *.exe
+
+# Wrangler
+.wrangler/
+worker-configuration.d.ts

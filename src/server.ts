@@ -1,111 +1,77 @@
-import { serve } from "bun";
-import { Database } from "bun:sqlite";
-import type { APRequest } from "@/types/activityPubTypes.ts";
-import { acceptFollow, checkPublicCollection } from "@/utils/activityPub.ts";
-import { parseHeader, fetchActor, verifySignature } from "@/utils/httpSignature.ts";
+import { Hono } from 'hono';
+import type { APRequest } from '@/types/activityPubTypes';
+import { acceptFollow, checkPublicCollection } from '@/utils/activityPub';
+import { parseHeader, fetchActor, verifySignature } from '@/utils/httpSignature';
 
-if (!process.env.HOSTNAME || !process.env.PUBLICKEY || !process.env.DB_FILE) {
-    throw new Error("Missing environment variables");
-}
-const db = initializeDatabase(process.env.DB_FILE);
+// Define the type for our environment bindings.
+// This will be used by Hono to type `c.env`.
+export type Bindings = {
+  DB: D1Database;
+  HOSTNAME: string;
+  PUBLICKEY: string;
+  PRIVATEKEY: string;
+};
 
-// Define the server
-const server = serve({
-  port: 3000,
-  hostname: '0.0.0.0',
-  fetch: handleRequest
+const app = new Hono<{ Bindings: Bindings }>();
+
+// Middleware to check for required environment variables.
+// This ensures the worker doesn't run without essential configuration.
+app.use('*', async (c, next) => {
+  if (!c.env.HOSTNAME || !c.env.PUBLICKEY || !c.env.PRIVATEKEY || !c.env.DB) {
+    console.error('Missing environment variables. Make sure HOSTNAME, PUBLICKEY, PRIVATEKEY are set and the D1 database is bound in wrangler.toml.');
+    return c.text('Internal Server Error: Missing configuration', 500);
+  }
+  await next();
 });
 
-console.log(`Listening on https://${server.hostname}:${server.port}`);
-
-// Function to initialize the database
-function initializeDatabase(dbFile: string) {
-  const database = new Database(dbFile, { create: true });
-  database.run("CREATE TABLE IF NOT EXISTS actors (id TEXT PRIMARY KEY, publicKey TEXT)");
-  database.run("CREATE TABLE IF NOT EXISTS followRequest (id TEXT PRIMARY KEY, actor TEXT, object TEXT)");
-  return database;
-}
-
-// Function to handle incoming requests
-async function handleRequest(req: Request) {
-  const url = new URL(req.url);
-
-  if (url.pathname === "/actor") {
-    return handleActorRequest();
-  }
-
-  if (url.pathname === '/.well-known/nodeinfo') {
-    return handleNodeInfoRequest();
-  }
-
-  if (url.pathname === "/.well-known/webfinger") {
-    return handleWebFingerRequest();
-  }
-
-  if (url.pathname === "/nodeinfo/2.1.json") {
-    return handleNodeInfoJsonRequest();
-  }
-
-  if (url.pathname === "/.well-known/host-meta") {
-    return handleHostMetaRequest();
-  }
-
-  if (url.pathname === "/inbox" && req.method === "POST") {
-    return handleInboxRequest(req);
-  }
-
-  return new Response("Not Found", { status: 404 });
-}
-
-// Handlers for specific endpoints
-function handleActorRequest() {
-  return new Response(JSON.stringify({
+// Actor endpoint
+app.get('/actor', (c) => {
+  return c.json({
     "@context": ["https://www.w3.org/ns/activitystreams"],
-    "id": `https://${process.env.HOSTNAME}/actor`,
+    "id": `https://${c.env.HOSTNAME}/actor`,
     "type": "Person",
     "preferredUsername": "relay",
-    "inbox": `https://${process.env.HOSTNAME}/inbox`,
-    "outbox": `https://${process.env.HOSTNAME}/outbox`,
+    "inbox": `https://${c.env.HOSTNAME}/inbox`,
+    "outbox": `https://${c.env.HOSTNAME}/outbox`,
     "discoverable": true,
     "publicKey": {
-      "publicKeyPem": process.env.PUBLICKEY,
-      "owner": `https://${process.env.HOSTNAME}/actor`,
+      "publicKeyPem": c.env.PUBLICKEY,
+      "owner": `https://${c.env.HOSTNAME}/actor`,
       "type": "Key",
-      "id": `https://${process.env.HOSTNAME}/actor#main-key`
+      "id": `https://${c.env.HOSTNAME}/actor#main-key`
     }
-  }), {
-    headers: { "Content-Type": "application/activity+json" }
-  });
-}
+  }, 200, { "Content-Type": "application/activity+json" });
+});
 
-function handleNodeInfoRequest() {
-  return new Response(JSON.stringify({
+// .well-known/nodeinfo endpoint
+app.get('/.well-known/nodeinfo', (c) => {
+  return c.json({
     "links": [
       {
         "rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
-        "href": `https://${process.env.HOSTNAME}/nodeinfo/2.1.json`
+        "href": `https://${c.env.HOSTNAME}/nodeinfo/2.1.json`
       }
     ]
-  }));
-}
+  });
+});
 
-function handleWebFingerRequest() {
-  return new Response(JSON.stringify({
-    "subject": `acct:relay@${process.env.HOSTNAME}`,
+// .well-known/webfinger endpoint
+app.get('/.well-known/webfinger', (c) => {
+  return c.json({
+    "subject": `acct:relay@${c.env.HOSTNAME}`,
     "links": [
       {
         "rel": "self",
         "type": "application/activity+json",
-        "href": `https://${process.env.HOSTNAME}/actor`
+        "href": `https://${c.env.HOSTNAME}/actor`
       }
     ]
-  }), {
-    headers: { "Content-Type": "application/jrd+json", "charset": "UTF-8" }
-  });
-}
+  }, 200, { "Content-Type": "application/jrd+json; charset=UTF-8" });
+});
 
-function handleNodeInfoJsonRequest() {
-  return new Response(JSON.stringify({
+// NodeInfo 2.1 JSON endpoint
+app.get('/nodeinfo/2.1.json', (c) => {
+  return c.json({
     "openRegistrations": false,
     "protocols": ['activitypub'],
     "software": {
@@ -122,61 +88,64 @@ function handleNodeInfoJsonRequest() {
       "outbound": [],
     },
     "version": "2.1",
-  }));
-}
-
-function handleHostMetaRequest() {
-  return new Response(`<?xml version="1.0" encoding="UTF-8"?>
-<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
-  <Link rel="lrdd" template="https://${process.env.HOSTNAME}/.well-known/webfinger?resource={uri}" />
-</XRD>`, {
-    headers: { "Content-Type": "application/xml" }
   });
-}
+});
 
-// Function to handle inbox requests
-async function handleInboxRequest(req: Request) {
-  const bodyText = await req.text();
-  const activity: APRequest = JSON.parse(bodyText);
-  const header = parseHeader(req);
+// .well-known/host-meta endpoint
+app.get('/.well-known/host-meta', (c) => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+  <Link rel="lrdd" template="https://${c.env.HOSTNAME}/.well-known/webfinger?resource={uri}" />
+</XRD>`;
+  return c.body(xml, 200, { "Content-Type": "application/xml" });
+});
+
+// Inbox endpoint for receiving activities
+app.post('/inbox', async (c) => {
+  // Clone the request to safely read the body, as it can only be read once.
+  const reqClone = c.req.raw.clone();
+  const activity: APRequest = await reqClone.json();
+
+  // Pass the original request to verifySignature. Cloning is a precaution.
+  if (!await verifySignature(c.req.raw)) {
+    return c.text("Unauthorized: Signature verification failed", 401);
+  }
+
+  const header = parseHeader(c.req.raw);
   const keyId = header["keyId"];
   const actor = await fetchActor(keyId);
 
-  if (!await verifySignature(req)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
   if (activity.type === "Follow") {
-    return handleFollowRequest(activity, actor);
+    if (await checkPublicCollection(activity)) {
+      const { results: actorExists } = await c.env.DB.prepare("SELECT id FROM actors WHERE id = ?").bind(activity.actor).all();
+      if (!actorExists || actorExists.length === 0) {
+        await c.env.DB.prepare("INSERT INTO actors (id, publicKey) VALUES (?, ?)").bind(activity.actor, actor.publicKey.publicKeyPem).run();
+      }
+
+      const { results: followRequestExists } = await c.env.DB.prepare("SELECT id FROM followRequest WHERE id = ?").bind(activity.id).all();
+      if (!followRequestExists || followRequestExists.length === 0) {
+        await c.env.DB.prepare("INSERT INTO followRequest (id, actor, object) VALUES (?, ?, ?)")
+          .bind(activity.id, activity.actor, typeof activity.object === 'string' ? activity.object : activity.object.id)
+          .run();
+      }
+
+      await acceptFollow(activity, actor.inbox, c.env);
+      return c.text("Accepted", 202);
+    }
+    return c.text("Bad Request: Follow must be for the public collection", 400);
   }
 
   if (activity.type === "Undo") {
-    return handleUndoRequest(activity);
+    const followActivityId = typeof activity.object !== "string" ? activity.object?.id : activity.object;
+    if (followActivityId) {
+      // Use the D1 binding from the context to perform the delete operations.
+      await c.env.DB.prepare("DELETE FROM followRequest WHERE id = ?").bind(followActivityId).run();
+      await c.env.DB.prepare("DELETE FROM actors WHERE id = ?").bind(activity.actor).run();
+    }
+    return c.text("OK", 200);
   }
 
-  return new Response("Not Found", { status: 404 });
-}
+  return c.text("Not Implemented: Activity type not handled", 501);
+});
 
-// Function to handle follow requests
-async function handleFollowRequest(activity: APRequest, actor: any) {
-  if (await checkPublicCollection(activity)) {
-    const actorExists = db.query("SELECT * FROM actors WHERE id = $id").all({ $id: activity.actor });
-    if (actorExists.length === 0) {
-      db.run("INSERT INTO actors (id, publicKey) VALUES (?, ?)", [activity.actor, actor.publicKey.publicKeyPem]);
-    }
-    const objectExists = db.query("SELECT * FROM actors WHERE id = $id").all({ $id: activity.id });
-    if (objectExists.length === 0) {
-      db.run("INSERT INTO actors (id, publicKey) VALUES (?, ?)", [activity.id, actor.publicKey.publicKeyPem]);
-    }
-    await acceptFollow(activity, actor.inbox);
-    return new Response("Accepted", { status: 202 });
-  }
-  return new Response("Bad Request", { status: 400 });
-}
-
-// Function to handle undo requests
-function handleUndoRequest(activity: APRequest) {
-  const id = typeof activity.object !== "string" ? activity.object?.id : activity.object;
-  db.query("DELETE FROM followRequest WHERE id = $id").all({ $id: id });
-  return new Response("OK", { status: 200 });
-}
+export default app;

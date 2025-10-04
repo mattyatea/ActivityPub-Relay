@@ -1,5 +1,6 @@
 import type {APActor} from "@/types/activityPubTypes.ts";
 import {createHash, createSign, createVerify} from 'crypto';
+import type { Bindings } from "@/server.ts";
 
 export function parseHeader(request: Request): { [key: string]: string } {
     const signatureHeader = request.headers.get("Signature");
@@ -96,8 +97,8 @@ export async function verifySignature(req: Request) {
     return verifier.verify(publicKey, signature, "base64");
 }
 
-export function signHeaders(body: string, strInbox: string) {
-    let privateKeyPem = process.env.PRIVATEKEY;
+export function signHeaders(body: string, strInbox: string, env: Bindings) {
+    let privateKeyPem = env.PRIVATEKEY;
     privateKeyPem = privateKeyPem?.split("\\n").join("\n");
     if (privateKeyPem?.startsWith('"')) privateKeyPem = privateKeyPem.slice(1);
     if (privateKeyPem?.endsWith('"')) privateKeyPem = privateKeyPem.slice(0, -1);
@@ -122,7 +123,7 @@ export function signHeaders(body: string, strInbox: string) {
         Date: strTime,
         Digest: `SHA-256=${s256}`,
         Signature: [
-            `keyId="https://${process.env.HOSTNAME}/actor#main-key"`,
+            `keyId="https://${env.HOSTNAME}/actor#main-key"`,
             'algorithm="rsa-sha256"',
             'headers="(request-target) host date digest"',
             `signature="${b64}"`,

@@ -1,0 +1,16 @@
+name = "activitypub-relay"
+main = "src/server.ts"
+compatibility_date = "2025-09-15"
+compatibility_flags = [ "nodejs_compat" ]
+
+# This is the D1 database binding.
+# You'll need to create a D1 database named "relay-db" in your Cloudflare account.
+# You can do this with the command: `pnpm wrangler d1 create relay-db`
+# Wrangler will then automatically link it.
+# The binding "DB" will be available in your Worker on `env.DB`.
+[[d1_databases]]
+binding = "DB"
+database_name = "relay-db"
+database_id = ""
+preview_database_id = ""
+migrations_dir = "migrations"
