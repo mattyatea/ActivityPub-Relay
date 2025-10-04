@@ -1,6 +1,6 @@
-import type {APActivity} from "@/types/activityPubTypes.ts";
-import type {Bindings} from "@/server.ts";
-import type {Context} from "hono";
+import type { Context } from 'hono';
+import type { Bindings } from '@/server.ts';
+import type { APActivity } from '@/types/activityPubTypes.ts';
 
 /**
  * Undo Activityを処理する
@@ -18,14 +18,22 @@ import type {Context} from "hono";
  * - フォローリクエストとアクター情報の両方をデータベースから削除します
  * - objectが存在しない場合はfalseを返します
  */
-export const undoActivity = async (activity: APActivity, context: Context<{
-    Bindings: Bindings
-}>): Promise<boolean> => {
-    const followActivityId = typeof activity.object !== "string" ? activity.object?.id : activity.object;
-    if (followActivityId) {
-        await context.env.DB.prepare("DELETE FROM followRequest WHERE id = ?").bind(followActivityId).run();
-        await context.env.DB.prepare("DELETE FROM actors WHERE id = ?").bind(activity.actor).run();
-        return true;
-    }
-    return false;
-}
+export const undoActivity = async (
+	activity: APActivity,
+	context: Context<{
+		Bindings: Bindings;
+	}>,
+): Promise<boolean> => {
+	const followActivityId =
+		typeof activity.object !== 'string' ? activity.object?.id : activity.object;
+	if (followActivityId) {
+		await context.env.DB.prepare('DELETE FROM followRequest WHERE id = ?')
+			.bind(followActivityId)
+			.run();
+		await context.env.DB.prepare('DELETE FROM actors WHERE id = ?')
+			.bind(activity.actor)
+			.run();
+		return true;
+	}
+	return false;
+};

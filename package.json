@@ -1,19 +1,22 @@
 {
-  "name": "activitypub-relay",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "dev": "wrangler dev src/server.ts",
-    "deploy": "wrangler deploy --minify src/server.ts"
-  },
-  "dependencies": {
-    "hono": "^4.9.9"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.2.5",
-    "@types/node": "^22.10.1",
-    "typescript": "^5.9.3",
-    "wrangler": "^4.42.0"
-  },
-  "type": "module"
+	"name": "activitypub-relay",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev src/server.ts",
+		"deploy": "wrangler deploy --minify src/server.ts",
+		"check": "biome check",
+		"fix": "biome check --write",
+		"fix-unsafe": "biome check --write --unsafe"
+	},
+	"dependencies": {
+		"hono": "^4.9.9"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.5",
+		"@types/node": "^22.10.1",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.42.0"
+	},
+	"type": "module"
 }
