@@ -1,7 +1,9 @@
+import { OpenAPIHandler } from '@orpc/openapi/fetch';
 import { Hono } from 'hono';
-import { followActivity } from '@/activity/follow.ts';
-import { relayActivity } from '@/activity/relay.ts';
-import { undoActivity } from '@/activity/undo.ts';
+import { followActivity } from '@/activityPub/follow.ts';
+import { relayActivity } from '@/activityPub/relay.ts';
+import { undoActivity } from '@/activityPub/undo.ts';
+import { router } from '@/api/router.ts';
 import type { APRequest } from '@/types/activityPubTypes';
 import { fetchActor } from '@/utils/activityPub.ts';
 import { parseHeader, verifySignature } from '@/utils/httpSignature';
@@ -11,6 +13,7 @@ export type Bindings = {
 	HOSTNAME: string;
 	PUBLICKEY: string;
 	PRIVATEKEY: string;
+	API_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -22,6 +25,41 @@ app.use('*', async (c, next) => {
 		);
 		return c.text('Internal Server Error: Missing configuration', 500);
 	}
+	await next();
+});
+
+const handler = new OpenAPIHandler(router);
+
+// API Key認証ミドルウェア
+app.use('/api/*', async (c, next) => {
+	// API_KEYが設定されている場合のみ認証チェック
+	const apiKey = c.req.header('X-API-Key');
+
+	if (!apiKey || apiKey !== c.env.API_KEY) {
+		return c.json(
+			{
+				error: 'Unauthorized',
+				message: 'Invalid or missing API key',
+			},
+			401,
+		);
+	}
+
+	await next();
+});
+
+app.use('/api/*', async (c, next) => {
+	const { matched, response } = await handler.handle(c.req.raw, {
+		prefix: '/api',
+		context: {
+			env: c.env,
+		},
+	});
+
+	if (matched) {
+		return c.newResponse(response.body, response);
+	}
+
 	await next();
 });
 

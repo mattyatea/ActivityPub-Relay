@@ -13,8 +13,13 @@
 		"db:migrate:prod": "wrangler d1 migrations apply relay"
 	},
 	"dependencies": {
+		"@orpc/client": "^1.9.3",
+		"@orpc/contract": "^1.9.3",
+		"@orpc/openapi": "^1.9.3",
+		"@orpc/server": "^1.9.3",
 		"@prisma/client": "^6.16.3",
-		"hono": "^4.9.9"
+		"hono": "^4.9.9",
+		"zod": "^4.1.11"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.5",

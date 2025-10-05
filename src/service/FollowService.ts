@@ -1,7 +1,54 @@
 import { createPrismaClient } from '@/lib/prisma.ts';
 import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
+import type {
+	FollowRequestStatus,
+	ListFollowRequestsResponse,
+} from '@/types/api.ts';
 import { acceptFollow, rejectFollow } from '@/utils/activityPub.ts';
+
+/**
+ * フォロー申請一覧を取得する
+ *
+ * @param status - フィルタするステータス（オプション）
+ * @param limit - 取得件数
+ * @param offset - オフセット
+ * @param env - 環境変数とD1データベース
+ * @returns {Promise<ListFollowRequestsResponse>}
+ */
+export async function listFollowRequests(
+	status: FollowRequestStatus | undefined,
+	limit: number,
+	offset: number,
+	env: Bindings,
+): Promise<ListFollowRequestsResponse> {
+	const prisma = createPrismaClient(env.DB);
+	try {
+		const where = status ? { status } : {};
+
+		const [requests, total] = await Promise.all([
+			prisma.followRequest.findMany({
+				where,
+				take: limit,
+				skip: offset,
+				orderBy: { id: 'desc' },
+			}),
+			prisma.followRequest.count({ where }),
+		]);
+
+		return {
+			requests: requests.map((r) => ({
+				id: r.id,
+				actorId: r.actor ?? '',
+				status: r.status as FollowRequestStatus,
+				createdAt: undefined,
+			})),
+			total,
+		};
+	} finally {
+		await prisma.$disconnect();
+	}
+}
 
 /**
  * Follow申請を承認する
