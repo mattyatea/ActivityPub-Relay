@@ -43,15 +43,55 @@ openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:204
 openssl rsa -pubout -in private_key.pem -out public_key.pem
 ```
 
-### 3. wrangler.tomlの設定
+### 3. 環境変数の設定
 
-`wrangler.toml`を編集して、環境変数とD1データベースを設定します:
+#### ローカル開発環境
+
+`.dev.vars.example`をコピーして`.dev.vars`を作成し、実際の値を設定します:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+`.dev.vars`を編集して以下を設定:
+
+```bash
+PUBLICKEY=-----BEGIN PUBLIC KEY-----
+<公開鍵の内容>
+-----END PUBLIC KEY-----
+
+PRIVATEKEY=-----BEGIN PRIVATE KEY-----
+<秘密鍵の内容>
+-----END PRIVATE KEY-----
+
+API_KEY=<強力なAPIキー>
+```
+
+#### 本番環境（Cloudflare）
+
+Cloudflare Workersにシークレットを登録します:
+
+```bash
+# 公開鍵を登録
+wrangler secret put PUBLICKEY
+# プロンプトで公開鍵の内容を貼り付け
+
+# 秘密鍵を登録
+wrangler secret put PRIVATEKEY
+# プロンプトで秘密鍵の内容を貼り付け
+
+# APIキーを登録
+wrangler secret put API_KEY
+# プロンプトでAPIキーを貼り付け
+```
+
+#### wrangler.tomlの設定
+
+`wrangler.toml`を編集してD1データベースとホスト名を設定します:
 
 ```toml
 [vars]
 HOSTNAME = "relay.example.com"  # リレーのドメイン
-PUBLICKEY = "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-PRIVATEKEY = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 
 [[d1_databases]]
 binding = "DB"
@@ -59,7 +99,7 @@ database_name = "activitypub-relay"
 database_id = "your-database-id"
 ```
 
-**注意**: ローカル開発のシークレットには`.dev.vars`も使用できます。
+**重要**: `PUBLICKEY`、`PRIVATEKEY`、`API_KEY`は`wrangler.toml`に含めず、必ず`wrangler secret put`コマンドで登録してください。
 
 ### 4. D1データベースの作成
 
@@ -163,15 +203,55 @@ openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:204
 openssl rsa -pubout -in private_key.pem -out public_key.pem
 ```
 
-#### 3. Configure wrangler.toml
+#### 3. Configure Environment Variables
 
-Edit `wrangler.toml` to set up your environment variables and D1 database:
+##### Local Development
+
+Copy `.dev.vars.example` to `.dev.vars` and set your actual values:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+Edit `.dev.vars` to set:
+
+```bash
+PUBLICKEY=-----BEGIN PUBLIC KEY-----
+<your public key content>
+-----END PUBLIC KEY-----
+
+PRIVATEKEY=-----BEGIN PRIVATE KEY-----
+<your private key content>
+-----END PRIVATE KEY-----
+
+API_KEY=<your-strong-api-key>
+```
+
+##### Production (Cloudflare)
+
+Register secrets to Cloudflare Workers:
+
+```bash
+# Register public key
+wrangler secret put PUBLICKEY
+# Paste your public key content when prompted
+
+# Register private key
+wrangler secret put PRIVATEKEY
+# Paste your private key content when prompted
+
+# Register API key
+wrangler secret put API_KEY
+# Paste your API key when prompted
+```
+
+##### Configure wrangler.toml
+
+Edit `wrangler.toml` to set up your D1 database and hostname:
 
 ```toml
 [vars]
 HOSTNAME = "relay.example.com"  # Your relay domain
-PUBLICKEY = "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-PRIVATEKEY = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 
 [[d1_databases]]
 binding = "DB"
@@ -179,7 +259,7 @@ database_name = "activitypub-relay"
 database_id = "your-database-id"
 ```
 
-**Note**: You can also use `.dev.vars` for local development secrets.
+**Important**: Do NOT include `PUBLICKEY`, `PRIVATEKEY`, or `API_KEY` in `wrangler.toml`. Always use `wrangler secret put` command to register them.
 
 #### 4. Create D1 Database
 
