@@ -10,37 +10,32 @@ import { acceptFollow, rejectFollow } from '@/utils/activityPub.ts';
 /**
  * フォロー申請一覧を取得する
  *
- * @param status - フィルタするステータス（オプション）
  * @param limit - 取得件数
  * @param offset - オフセット
  * @param env - 環境変数とD1データベース
  * @returns {Promise<ListFollowRequestsResponse>}
  */
 export async function listFollowRequests(
-	status: FollowRequestStatus | undefined,
 	limit: number,
 	offset: number,
 	env: Bindings,
 ): Promise<ListFollowRequestsResponse> {
 	const prisma = createPrismaClient(env.DB);
 	try {
-		const where = status ? { status } : {};
-
 		const [requests, total] = await Promise.all([
 			prisma.followRequest.findMany({
-				where,
 				take: limit,
 				skip: offset,
 				orderBy: { id: 'desc' },
 			}),
-			prisma.followRequest.count({ where }),
+			prisma.followRequest.count(),
 		]);
 
 		return {
 			requests: requests.map((r) => ({
 				id: r.id,
 				actorId: r.actor ?? '',
-				status: r.status as FollowRequestStatus,
+				status: 'pending' as FollowRequestStatus,
 				createdAt: undefined,
 			})),
 			total,
@@ -81,25 +76,9 @@ export async function approveFollowRequest(
 			return false;
 		}
 
-		if (followRequest.status !== 'pending') {
-			console.warn(
-				`Follow request ${followRequestId} is already ${followRequest.status}`,
-			);
-			return false;
-		}
-
 		// アクター情報を取得
 		if (!followRequest.actor) {
 			console.error('No actor found for follow request:', followRequestId);
-			return false;
-		}
-
-		const actor = await prisma.actor.findUnique({
-			where: { id: followRequest.actor },
-		});
-
-		if (!actor) {
-			console.error('Actor not found:', followRequest.actor);
 			return false;
 		}
 
@@ -112,13 +91,32 @@ export async function approveFollowRequest(
 			return false;
 		}
 
-		// Accept送信を先に実行
-		await acceptFollow(activity, actor.inbox, env);
+		// アクター情報をfetchする
+		const { fetchActor } = await import('@/utils/activityPub.ts');
+		const actorData = await fetchActor(followRequest.actor);
 
-		// Accept送信成功後にステータスを更新
-		await prisma.followRequest.update({
+		// actorテーブルに追加
+		await prisma.actor.upsert({
+			where: { id: followRequest.actor },
+			update: {
+				inbox: actorData.inbox,
+				sharedInbox: actorData.endpoints?.sharedInbox ?? null,
+				publicKey: actorData.publicKey?.publicKeyPem ?? null,
+			},
+			create: {
+				id: followRequest.actor,
+				inbox: actorData.inbox,
+				sharedInbox: actorData.endpoints?.sharedInbox ?? null,
+				publicKey: actorData.publicKey?.publicKeyPem ?? null,
+			},
+		});
+
+		// Accept送信
+		await acceptFollow(activity, actorData.inbox, env);
+
+		// followRequestから削除
+		await prisma.followRequest.delete({
 			where: { id: followRequestId },
-			data: { status: 'approved' },
 		});
 
 		console.log(`Follow request ${followRequestId} approved and Accept sent`);
@@ -161,10 +159,8 @@ export async function rejectFollowRequest(
 			return false;
 		}
 
-		if (followRequest.status !== 'pending') {
-			console.warn(
-				`Follow request ${followRequestId} is already ${followRequest.status}`,
-			);
+		if (!followRequest.actor) {
+			console.error('No actor found for follow request:', followRequestId);
 			return false;
 		}
 
@@ -177,23 +173,16 @@ export async function rejectFollowRequest(
 			return false;
 		}
 
-		// アクター情報を取得
-		const actor = await prisma.actor.findUnique({
-			where: { id: activity.actor },
-		});
+		// アクター情報をfetchする
+		const { fetchActor } = await import('@/utils/activityPub.ts');
+		const actorData = await fetchActor(followRequest.actor);
 
-		if (!actor) {
-			console.error('Actor not found');
-			return false;
-		}
+		// Reject送信
+		await rejectFollow(activity, actorData.inbox, env);
 
-		// Reject送信を先に実行
-		await rejectFollow(activity, actor.inbox, env);
-
-		// Reject送信成功後にステータスを更新
-		await prisma.followRequest.update({
+		// followRequestから削除
+		await prisma.followRequest.delete({
 			where: { id: followRequestId },
-			data: { status: 'rejected' },
 		});
 
 		console.log(`Follow request ${followRequestId} rejected and Reject sent`);

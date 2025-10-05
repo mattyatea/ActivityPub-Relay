@@ -21,14 +21,13 @@ import {
  *
  * @param activity - 受信したFollow Activity
  * @param actor - リクエストを送信したアクター情報
- * @param context - Honoのコンテキスト（環境変数とD1データベースへのアクセスを含む）
+ * @param context - Honoのコンテキスト(環境変数とD1データベースへのアクセスを含む)
  * @returns {Promise<boolean>} 処理が成功した場合はtrue、失敗した場合はfalse
  *
  * @remarks
  * - アクティビティがpublicコレクション宛でない場合は失敗します
- * - アクター情報とフォローリクエストをデータベースに保存します
- * - 既存のアクターの場合は情報を更新します
- * - Accept Activityの送信に失敗した場合はfalseを返します
+ * - フォローリクエストをデータベースに保存します
+ * - 自動承認モードの場合はactorテーブルに追加してAcceptを送信します
  */
 export const followActivity = async (
 	activity: APActivity,
@@ -59,22 +58,6 @@ export const followActivity = async (
 				return false;
 			}
 
-			// アクターの存在確認とupsert
-			await prisma.actor.upsert({
-				where: { id: activity.actor },
-				update: {
-					inbox: followerRecord.inbox,
-					sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
-					publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
-				},
-				create: {
-					id: activity.actor,
-					inbox: followerRecord.inbox,
-					sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
-					publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
-				},
-			});
-
 			// 自動承認モードの確認
 			const autoApproveSetting = await prisma.setting.findUnique({
 				where: { key: 'auto_approve_follows' },
@@ -95,23 +78,43 @@ export const followActivity = async (
 							? activity.object.id
 							: null;
 
-				const initialStatus = autoApprove ? 'approved' : 'pending';
-
 				await prisma.followRequest.create({
 					data: {
 						id: activity.id,
 						actor: activity.actor,
 						object: followObjectId,
-						status: initialStatus,
 						activity_json: JSON.stringify(activity),
 					},
 				});
 			}
 
-			// 自動承認モードの場合は即座にAcceptを送信
+			// 自動承認モードの場合は即座にactorテーブルに追加してAcceptを送信
 			if (autoApprove) {
 				try {
+					// actorテーブルに追加
+					await prisma.actor.upsert({
+						where: { id: activity.actor },
+						update: {
+							inbox: followerRecord.inbox,
+							sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
+							publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
+						},
+						create: {
+							id: activity.actor,
+							inbox: followerRecord.inbox,
+							sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
+							publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
+						},
+					});
+
+					// Accept送信
 					await acceptFollow(activity, followerRecord.inbox, context.env);
+
+					// followRequestから削除
+					await prisma.followRequest.delete({
+						where: { id: activity.id },
+					});
+
 					console.log(
 						`Follow request from ${activity.actor} auto-approved and Accept sent`,
 					);

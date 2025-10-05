@@ -23,7 +23,6 @@ model FollowRequest {
   id            String  @id
   actor         String?
   object        String?
-  status        String  @default("pending") // pending, approved, rejected
   activity_json String?
 
   @@map("followRequest")
