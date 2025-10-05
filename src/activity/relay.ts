@@ -41,7 +41,10 @@ export const relayActivity = async (
 	}
 
 	const { results: followers } = await context.env.DB.prepare(
-		'SELECT id, inbox, sharedInbox FROM actors',
+		`SELECT DISTINCT a.id, a.inbox, a.sharedInbox
+		FROM actors a
+		INNER JOIN followRequest fr ON a.id = fr.actor
+		WHERE fr.status = 'approved'`,
 	).all<{
 		id: string;
 		inbox: string;

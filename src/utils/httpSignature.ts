@@ -23,7 +23,11 @@ export function parseHeader(request: Request): { [key: string]: string } {
 
 		if (key === 'signature') {
 			const regex = /signature="([^"]+)"/;
-			value = param.match(regex)[1];
+			const match = param.match(regex);
+			if (!match) {
+				throw new Error('Invalid Signature format');
+			}
+			value = match[1];
 		}
 
 		if (value.startsWith('"')) {
@@ -43,8 +47,6 @@ export function parseHeader(request: Request): { [key: string]: string } {
 
 	return params;
 }
-
-export async function signature() {}
 
 export async function verifySignature(req: Request) {
 	const header = parseHeader(req);

@@ -1,7 +1,15 @@
 import type { Context } from 'hono';
 import type { Bindings } from '@/server.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
-import {acceptFollow, checkPublicCollection, fetchActor} from '@/utils/activityPub.ts';
+import {
+	acceptFollow,
+	checkPublicCollection,
+	fetchActor,
+} from '@/utils/activityPub.ts';
+import {
+	extractDomainFromActorId,
+	isDomainBlocked,
+} from '@/utils/domainBlock.ts';
 
 /**
  * Follow Activityを処理する
@@ -34,6 +42,17 @@ export const followActivity = async (
 			followerRecord = await fetchActor(activity.actor);
 		}
 
+		// ドメインブロックチェック
+		const domain = extractDomainFromActorId(activity.actor);
+		if (!domain) {
+			console.error('Failed to extract domain from actor ID:', activity.actor);
+			return false;
+		}
+		if (await isDomainBlocked(domain, context.env.DB)) {
+			console.warn(`Follow request rejected: domain ${domain} is blocked`);
+			return false;
+		}
+
 		const { results: actorExists } = await context.env.DB.prepare(
 			'SELECT id FROM actors WHERE id = ?',
 		)
@@ -63,6 +82,16 @@ export const followActivity = async (
 				.run();
 		}
 
+		// 自動承認モードの確認
+		const { results: settingsResults } = await context.env.DB.prepare(
+			"SELECT value FROM settings WHERE key = 'auto_approve_follows'",
+		).all<{ value: string }>();
+
+		const autoApprove =
+			settingsResults &&
+			settingsResults.length > 0 &&
+			settingsResults[0].value === 'true';
+
 		const { results: followRequestExists } = await context.env.DB.prepare(
 			'SELECT id FROM followRequest WHERE id = ?',
 		)
@@ -73,19 +102,38 @@ export const followActivity = async (
 				typeof activity.object === 'string'
 					? activity.object
 					: (activity.object?.id ?? null);
+
+			const initialStatus = autoApprove ? 'approved' : 'pending';
+
 			await context.env.DB.prepare(
-				'INSERT INTO followRequest (id, actor, object) VALUES (?, ?, ?)',
+				'INSERT INTO followRequest (id, actor, object, status, activity_json) VALUES (?, ?, ?, ?, ?)',
 			)
-				.bind(activity.id, activity.actor, followObjectId)
+				.bind(
+					activity.id,
+					activity.actor,
+					followObjectId,
+					initialStatus,
+					JSON.stringify(activity),
+				)
 				.run();
 		}
 
-		try {
-			await acceptFollow(activity, followerRecord.inbox, context.env);
-		} catch (error) {
-			console.error('Failed to send Accept response', error);
-			return false;
+		// 自動承認モードの場合は即座にAcceptを送信
+		if (autoApprove) {
+			try {
+				await acceptFollow(activity, followerRecord.inbox, context.env);
+				console.log(
+					`Follow request from ${activity.actor} auto-approved and Accept sent`,
+				);
+			} catch (error) {
+				console.error('Failed to send Accept:', error);
+				return false;
+			}
+		} else {
+			// Accept は送らず、承認待ちとして保存するのみ
+			console.log(`Follow request from ${activity.actor} saved as pending`);
 		}
+
 		return true;
 	} else {
 		console.warn('Follow activity is not for the public collection');

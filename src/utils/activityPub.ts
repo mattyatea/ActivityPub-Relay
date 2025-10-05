@@ -4,6 +4,10 @@ import { signHeaders } from '@/utils/httpSignature.ts';
 
 const PUBLIC_COLLECTION = 'https://www.w3.org/ns/activitystreams#Public';
 
+export const idGenerator = () => {
+	return Date.now().toString();
+};
+
 function normaliseAudienceField(
 	value: string | string[] | undefined,
 ): string[] {
@@ -83,23 +87,6 @@ export async function sendActivity(
 	return response;
 }
 
-export async function acceptFollow(
-	activity: APRequest,
-	targetInbox: string,
-	env: Bindings,
-) {
-	const numId = Math.floor(Date.now() / 1000);
-	const body: APRequest = {
-		'@context': ['https://www.w3.org/ns/activitystreams'],
-		id: `https://${env.HOSTNAME}/activity/${numId}`,
-		type: 'Accept',
-		actor: `https://${env.HOSTNAME}/actor`,
-		object: activity,
-	};
-	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
-	await sendActivity(targetInbox, body, headers);
-}
-
 export async function fetchActor(keyId: string): Promise<APActor> {
 	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
 	const response = await fetch(actorUrl, {
@@ -124,4 +111,38 @@ export async function fetchActor(keyId: string): Promise<APActor> {
 		}
 	}
 	return JSON.parse(result);
+}
+
+export async function acceptFollow(
+	activity: APRequest,
+	targetInbox: string,
+	env: Bindings,
+) {
+	const id = idGenerator();
+	const body: APRequest = {
+		'@context': ['https://www.w3.org/ns/activitystreams'],
+		id: `https://${env.HOSTNAME}/activity/${id}`,
+		type: 'Accept',
+		actor: `https://${env.HOSTNAME}/actor`,
+		object: activity,
+	};
+	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
+	await sendActivity(targetInbox, body, headers);
+}
+
+export async function rejectFollow(
+	activity: APRequest,
+	targetInbox: string,
+	env: Bindings,
+) {
+	const id = idGenerator();
+	const body: APRequest = {
+		'@context': ['https://www.w3.org/ns/activitystreams'],
+		id: `https://${env.HOSTNAME}/activity/${id}`,
+		type: 'Reject',
+		actor: `https://${env.HOSTNAME}/actor`,
+		object: activity,
+	};
+	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
+	await sendActivity(targetInbox, body, headers);
 }
