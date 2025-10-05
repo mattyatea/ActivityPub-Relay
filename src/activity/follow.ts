@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { createPrismaClient } from '@/lib/prisma.ts';
 import type { Bindings } from '@/server.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
 import {
@@ -37,104 +38,99 @@ export const followActivity = async (
 	}>,
 ): Promise<boolean> => {
 	if (checkPublicCollection(activity)) {
-		let followerRecord = actor;
-		if (actor.id !== activity.actor) {
-			followerRecord = await fetchActor(activity.actor);
-		}
+		const prisma = createPrismaClient(context.env.DB);
+		try {
+			let followerRecord = actor;
+			if (actor.id !== activity.actor) {
+				followerRecord = await fetchActor(activity.actor);
+			}
 
-		// ドメインブロックチェック
-		const domain = extractDomainFromActorId(activity.actor);
-		if (!domain) {
-			console.error('Failed to extract domain from actor ID:', activity.actor);
-			return false;
-		}
-		if (await isDomainBlocked(domain, context.env.DB)) {
-			console.warn(`Follow request rejected: domain ${domain} is blocked`);
-			return false;
-		}
-
-		const { results: actorExists } = await context.env.DB.prepare(
-			'SELECT id FROM actors WHERE id = ?',
-		)
-			.bind(activity.actor)
-			.all();
-		if (!actorExists || actorExists.length === 0) {
-			await context.env.DB.prepare(
-				'INSERT INTO actors (id, inbox, sharedInbox, publicKey) VALUES (?, ?, ?, ?)',
-			)
-				.bind(
+			// ドメインブロックチェック
+			const domain = extractDomainFromActorId(activity.actor);
+			if (!domain) {
+				console.error(
+					'Failed to extract domain from actor ID:',
 					activity.actor,
-					followerRecord.inbox,
-					followerRecord.endpoints?.sharedInbox ?? null,
-					followerRecord.publicKey?.publicKeyPem ?? null,
-				)
-				.run();
-		} else {
-			await context.env.DB.prepare(
-				'UPDATE actors SET inbox = ?, sharedInbox = ?, publicKey = ? WHERE id = ?',
-			)
-				.bind(
-					followerRecord.inbox,
-					followerRecord.endpoints?.sharedInbox ?? null,
-					followerRecord.publicKey?.publicKeyPem ?? null,
-					activity.actor,
-				)
-				.run();
-		}
-
-		// 自動承認モードの確認
-		const { results: settingsResults } = await context.env.DB.prepare(
-			"SELECT value FROM settings WHERE key = 'auto_approve_follows'",
-		).all<{ value: string }>();
-
-		const autoApprove =
-			settingsResults &&
-			settingsResults.length > 0 &&
-			settingsResults[0].value === 'true';
-
-		const { results: followRequestExists } = await context.env.DB.prepare(
-			'SELECT id FROM followRequest WHERE id = ?',
-		)
-			.bind(activity.id)
-			.all();
-		if (!followRequestExists || followRequestExists.length === 0) {
-			const followObjectId =
-				typeof activity.object === 'string'
-					? activity.object
-					: (activity.object?.id ?? null);
-
-			const initialStatus = autoApprove ? 'approved' : 'pending';
-
-			await context.env.DB.prepare(
-				'INSERT INTO followRequest (id, actor, object, status, activity_json) VALUES (?, ?, ?, ?, ?)',
-			)
-				.bind(
-					activity.id,
-					activity.actor,
-					followObjectId,
-					initialStatus,
-					JSON.stringify(activity),
-				)
-				.run();
-		}
-
-		// 自動承認モードの場合は即座にAcceptを送信
-		if (autoApprove) {
-			try {
-				await acceptFollow(activity, followerRecord.inbox, context.env);
-				console.log(
-					`Follow request from ${activity.actor} auto-approved and Accept sent`,
 				);
-			} catch (error) {
-				console.error('Failed to send Accept:', error);
 				return false;
 			}
-		} else {
-			// Accept は送らず、承認待ちとして保存するのみ
-			console.log(`Follow request from ${activity.actor} saved as pending`);
-		}
+			if (await isDomainBlocked(domain, context.env.DB)) {
+				console.warn(`Follow request rejected: domain ${domain} is blocked`);
+				return false;
+			}
 
-		return true;
+			// アクターの存在確認とupsert
+			await prisma.actor.upsert({
+				where: { id: activity.actor },
+				update: {
+					inbox: followerRecord.inbox,
+					sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
+					publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
+				},
+				create: {
+					id: activity.actor,
+					inbox: followerRecord.inbox,
+					sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
+					publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
+				},
+			});
+
+			// 自動承認モードの確認
+			const autoApproveSetting = await prisma.setting.findUnique({
+				where: { key: 'auto_approve_follows' },
+			});
+
+			const autoApprove = autoApproveSetting?.value === 'true';
+
+			// フォローリクエストの存在確認と作成
+			const existingFollowRequest = await prisma.followRequest.findUnique({
+				where: { id: activity.id },
+			});
+
+			if (!existingFollowRequest) {
+				const followObjectId: string | null =
+					typeof activity.object === 'string'
+						? activity.object
+						: typeof activity.object?.id === 'string'
+							? activity.object.id
+							: null;
+
+				const initialStatus = autoApprove ? 'approved' : 'pending';
+
+				await prisma.followRequest.create({
+					data: {
+						id: activity.id,
+						actor: activity.actor,
+						object: followObjectId,
+						status: initialStatus,
+						activity_json: JSON.stringify(activity),
+					},
+				});
+			}
+
+			// 自動承認モードの場合は即座にAcceptを送信
+			if (autoApprove) {
+				try {
+					await acceptFollow(activity, followerRecord.inbox, context.env);
+					console.log(
+						`Follow request from ${activity.actor} auto-approved and Accept sent`,
+					);
+				} catch (error) {
+					console.error('Failed to send Accept:', error);
+					return false;
+				}
+			} else {
+				// Accept は送らず、承認待ちとして保存するのみ
+				console.log(`Follow request from ${activity.actor} saved as pending`);
+			}
+
+			return true;
+		} catch (error) {
+			console.error('Failed to process follow activity:', error);
+			return false;
+		} finally {
+			await prisma.$disconnect();
+		}
 	} else {
 		console.warn('Follow activity is not for the public collection');
 		return false;

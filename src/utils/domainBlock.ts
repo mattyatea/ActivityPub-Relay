@@ -1,3 +1,5 @@
+import { createPrismaClient } from '@/lib/prisma.ts';
+
 /**
  * アクターIDからドメインを抽出する
  *
@@ -39,15 +41,6 @@ function matchesDomainPattern(
 	return domain === pattern;
 }
 
-type SettingRecord = {
-	value: string;
-};
-
-type DomainRuleRecord = {
-	pattern: string;
-	is_regex: number;
-};
-
 /**
  * ドメインがブロックされているかチェックする
  * blacklist: ルールにマッチしたらtrue (ブロック)
@@ -61,32 +54,39 @@ export async function isDomainBlocked(
 	domain: string,
 	db: D1Database,
 ): Promise<boolean> {
-	// ブロックモードを取得
-	const { results: modeResults } = await db
-		.prepare("SELECT value FROM settings WHERE key = 'domain_block_mode'")
-		.all<SettingRecord>();
+	const prisma = createPrismaClient(db);
+	try {
+		// ブロックモードを取得
+		const modeSetting = await prisma.setting.findUnique({
+			where: { key: 'domain_block_mode' },
+		});
 
-	const mode =
-		modeResults && modeResults.length > 0 ? modeResults[0].value : 'blacklist';
+		const mode = modeSetting?.value ?? 'blacklist';
 
-	// 全てのドメインルールを取得
-	const { results: rules } = await db
-		.prepare('SELECT pattern, is_regex FROM domainRules')
-		.all<DomainRuleRecord>();
+		// 全てのドメインルールを取得
+		const rules = await prisma.domainRule.findMany({
+			select: {
+				pattern: true,
+				is_regex: true,
+			},
+		});
 
-	if (!rules || rules.length === 0) {
-		// ルールが無い場合
-		// blacklist: 全て許可 (false)
-		// whitelist: 全て拒否 (true)
-		return mode === 'whitelist';
+		if (rules.length === 0) {
+			// ルールが無い場合
+			// blacklist: 全て許可 (false)
+			// whitelist: 全て拒否 (true)
+			return mode === 'whitelist';
+		}
+
+		// ドメインがルールにマッチするかチェック
+		const matches = rules.some((rule) =>
+			matchesDomainPattern(domain, rule.pattern, rule.is_regex === 1),
+		);
+
+		// blacklist: マッチしたらブロック
+		// whitelist: マッチしなかったらブロック
+		return mode === 'blacklist' ? matches : !matches;
+	} finally {
+		await prisma.$disconnect();
 	}
-
-	// ドメインがルールにマッチするかチェック
-	const matches = rules.some((rule) =>
-		matchesDomainPattern(domain, rule.pattern, rule.is_regex === 1),
-	);
-
-	// blacklist: マッチしたらブロック
-	// whitelist: マッチしなかったらブロック
-	return mode === 'blacklist' ? matches : !matches;
 }

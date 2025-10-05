@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { createPrismaClient } from '@/lib/prisma.ts';
 import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 
@@ -26,14 +27,23 @@ export const undoActivity = async (
 ): Promise<boolean> => {
 	const followActivityId =
 		typeof activity.object !== 'string' ? activity.object?.id : activity.object;
-	if (followActivityId) {
-		await context.env.DB.prepare('DELETE FROM followRequest WHERE id = ?')
-			.bind(followActivityId)
-			.run();
-		await context.env.DB.prepare('DELETE FROM actors WHERE id = ?')
-			.bind(activity.actor)
-			.run();
-		return true;
+	if (!followActivityId || typeof followActivityId !== 'string') {
+		return false;
 	}
-	return false;
+
+	const prisma = createPrismaClient(context.env.DB);
+	try {
+		await prisma.followRequest.delete({
+			where: { id: followActivityId },
+		});
+		await prisma.actor.delete({
+			where: { id: activity.actor },
+		});
+		return true;
+	} catch (error) {
+		console.error('Failed to undo activity:', error);
+		return false;
+	} finally {
+		await prisma.$disconnect();
+	}
 };

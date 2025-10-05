@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Actor {
+  id          String  @id
+  inbox       String
+  sharedInbox String?
+  publicKey   String?
+
+  @@map("actors")
+}
+
+model FollowRequest {
+  id            String  @id
+  actor         String?
+  object        String?
+  status        String  @default("pending") // pending, approved, rejected
+  activity_json String?
+
+  @@map("followRequest")
+}
+
+model DomainRule {
+  id         Int      @id @default(autoincrement())
+  pattern    String
+  is_regex   Int      @default(0) // SQLite boolean as integer
+  created_at Int      @default(0) // Unix timestamp
+  reason     String?
+
+  @@map("domainRules")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}

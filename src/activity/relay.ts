@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { createPrismaClient } from '@/lib/prisma.ts';
 import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
@@ -40,59 +41,87 @@ export const relayActivity = async (
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
-	const { results: followers } = await context.env.DB.prepare(
-		`SELECT DISTINCT a.id, a.inbox, a.sharedInbox
-		FROM actors a
-		INNER JOIN followRequest fr ON a.id = fr.actor
-		WHERE fr.status = 'approved'`,
-	).all<{
-		id: string;
-		inbox: string;
-		sharedInbox: string | null;
-	}>();
+	const prisma = createPrismaClient(context.env.DB);
+	try {
+		// 承認済みのフォローリクエストを持つアクターを取得
+		const approvedFollowRequests = await prisma.followRequest.findMany({
+			where: { status: 'approved' },
+			select: {
+				actor: true,
+			},
+			distinct: ['actor'],
+		});
 
-	if (!followers || followers.length === 0) {
-		return { success: false, relayedCount: 0, failureCount: 0 };
-	}
-
-	const safeHostname = (value: string) => {
-		try {
-			return new URL(value).hostname;
-		} catch {
-			return null;
+		if (approvedFollowRequests.length === 0) {
+			return { success: false, relayedCount: 0, failureCount: 0 };
 		}
-	};
 
-	const originHost = safeHostname(activity.actor);
-	const recipients = followers.filter((follower) => {
-		if (!originHost) return true;
-		const followerHost = safeHostname(follower.id);
-		return followerHost !== originHost;
-	});
+		// アクター情報を取得
+		const actorIds = approvedFollowRequests
+			.map((fr) => fr.actor)
+			.filter((id): id is string => id !== null);
+		const actors = await prisma.actor.findMany({
+			where: {
+				id: { in: actorIds },
+			},
+			select: {
+				id: true,
+				inbox: true,
+				sharedInbox: true,
+			},
+		});
 
-	if (recipients.length === 0) {
-		return { success: false, relayedCount: 0, failureCount: 0 };
-	}
+		if (actors.length === 0) {
+			return { success: false, relayedCount: 0, failureCount: 0 };
+		}
 
-	const deliveries = await Promise.allSettled(
-		recipients.map(async (follower) => {
-			const inbox = follower.sharedInbox ?? follower.inbox;
-			const headers = signHeaders(JSON.stringify(activity), inbox, context.env);
-			await sendActivity(inbox, activity, headers);
-		}),
-	);
+		const safeHostname = (value: string) => {
+			try {
+				return new URL(value).hostname;
+			} catch {
+				return null;
+			}
+		};
 
-	const failures = deliveries.filter((result) => result.status === 'rejected');
-	if (failures.length > 0) {
-		console.warn(
-			`Failed to relay activity ${activity.id} to ${failures.length} follower(s)`,
-			failures,
+		const originHost = safeHostname(activity.actor);
+		const recipients = actors.filter((follower) => {
+			if (!originHost) return true;
+			const followerHost = safeHostname(follower.id);
+			return followerHost !== originHost;
+		});
+
+		if (recipients.length === 0) {
+			return { success: false, relayedCount: 0, failureCount: 0 };
+		}
+
+		const deliveries = await Promise.allSettled(
+			recipients.map(async (follower) => {
+				const inbox = follower.sharedInbox ?? follower.inbox;
+				const headers = signHeaders(
+					JSON.stringify(activity),
+					inbox,
+					context.env,
+				);
+				await sendActivity(inbox, activity, headers);
+			}),
 		);
-	}
 
-	return {
-		success: true,
-		relayedCount: deliveries.length - failures.length,
-		failureCount: failures.length,
-	};
+		const failures = deliveries.filter(
+			(result) => result.status === 'rejected',
+		);
+		if (failures.length > 0) {
+			console.warn(
+				`Failed to relay activity ${activity.id} to ${failures.length} follower(s)`,
+				failures,
+			);
+		}
+
+		return {
+			success: true,
+			relayedCount: deliveries.length - failures.length,
+			failureCount: failures.length,
+		};
+	} finally {
+		await prisma.$disconnect();
+	}
 };
