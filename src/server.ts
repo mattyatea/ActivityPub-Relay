@@ -14,6 +14,7 @@ export type Bindings = {
 	PUBLICKEY: string;
 	PRIVATEKEY: string;
 	API_KEY?: string;
+	ASSETS: Fetcher;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -199,6 +200,11 @@ app.get('/.well-known/host-meta', (c) => {
   <Link rel="lrdd" template="https://${c.env.HOSTNAME}/.well-known/webfinger?resource={uri}" />
 </XRD>`;
 	return c.body(xml, 200, { 'Content-Type': 'application/xml' });
+});
+
+// Serve static assets from public directory
+app.get('/*', async (c) => {
+	return c.env.ASSETS.fetch(c.req.raw);
 });
 
 export default app;

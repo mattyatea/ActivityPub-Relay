@@ -14,6 +14,8 @@ import {
 import {
 	getSettings as getSettingsService,
 	updateSettings as updateSettingsService,
+	getSettingByKey as getSettingByKeyService,
+	updateSettingByKey as updateSettingByKeyService,
 } from '@/service/SettingsService';
 
 type Context = {
@@ -43,6 +45,33 @@ const updateSettings = os.settings.update.handler(async ({ input, context }) => 
 	return { success };
 });
 
+/**
+ * GET /api/settings/{key}
+ * 個別の設定を取得
+ */
+const getSettingByKey = os.settings.getByKey.handler(async ({ input, context }) => {
+	try {
+		return await getSettingByKeyService(input.key, context.env);
+	} catch (error) {
+		console.error('Failed to get setting by key:', error);
+		throw error;
+	}
+});
+
+/**
+ * PUT /api/settings/{key}
+ * 個別の設定を更新
+ */
+const updateSettingByKey = os.settings.updateByKey.handler(async ({ input, context }) => {
+	try {
+		const success = await updateSettingByKeyService(input.key, input.value, context.env);
+		return { success };
+	} catch (error) {
+		console.error('Failed to update setting by key:', error);
+		return { success: false };
+	}
+});
+
 // ============================================================
 // Follow Requests API
 // ============================================================
@@ -54,7 +83,6 @@ const updateSettings = os.settings.update.handler(async ({ input, context }) => 
 const listFollowRequests = os.followRequests.list.handler(
 	async ({ input, context }) => {
 		return await listFollowRequestsService(
-			input.status,
 			input.limit,
 			input.offset,
 			context.env,
@@ -63,20 +91,32 @@ const listFollowRequests = os.followRequests.list.handler(
 );
 
 /**
- * POST /api/followRequests/update
- * フォロー申請を承認または拒否
+ * POST /api/follow-requests/{id}/approve
+ * フォロー申請を承認
  */
-const updateFollowRequest = os.followRequests.update.handler(
+const approveFollowRequestHandler = os.followRequests.approve.handler(
 	async ({ input, context }) => {
 		try {
-			const success =
-				input.status === 'approved'
-					? await approveFollowRequest(input.id, context.env)
-					: await rejectFollowRequest(input.id, context.env);
-
+			const success = await approveFollowRequest(input.id, context.env);
 			return { success };
 		} catch (error) {
-			console.error('Failed to update follow request:', error);
+			console.error('Failed to approve follow request:', error);
+			return { success: false };
+		}
+	},
+);
+
+/**
+ * POST /api/follow-requests/{id}/reject
+ * フォロー申請を拒否
+ */
+const rejectFollowRequestHandler = os.followRequests.reject.handler(
+	async ({ input, context }) => {
+		try {
+			const success = await rejectFollowRequest(input.id, context.env);
+			return { success };
+		} catch (error) {
+			console.error('Failed to reject follow request:', error);
 			return { success: false };
 		}
 	},
@@ -134,10 +174,13 @@ export const router = os.router({
 	settings: {
 		get: getSettings,
 		update: updateSettings,
+		getByKey: getSettingByKey,
+		updateByKey: updateSettingByKey,
 	},
 	followRequests: {
 		list: listFollowRequests,
-		update: updateFollowRequest,
+		approve: approveFollowRequestHandler,
+		reject: rejectFollowRequestHandler,
 	},
 	domainRules: {
 		list: listDomainRules,

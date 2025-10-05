@@ -53,6 +53,38 @@ export const contract = {
 					success: z.boolean(),
 				}),
 			),
+		getByKey: oc
+			.route({
+				method: 'GET',
+				path: '/settings/{key}',
+			})
+			.input(
+				z.object({
+					key: z.string().min(1),
+				}),
+			)
+			.output(
+				z.object({
+					key: z.string(),
+					value: z.string(),
+				}),
+			),
+		updateByKey: oc
+			.route({
+				method: 'PUT',
+				path: '/settings/{key}',
+			})
+			.input(
+				z.object({
+					key: z.string().min(1),
+					value: z.string(),
+				}),
+			)
+			.output(
+				z.object({
+					success: z.boolean(),
+				}),
+			),
 	},
 	followRequests: {
 		list: oc
@@ -63,8 +95,8 @@ export const contract = {
 			.input(
 				z.object({
 					status: FollowRequestStatusSchema.optional(),
-					limit: z.number().int().min(1).max(100).default(50),
-					offset: z.number().int().min(0).default(0),
+					limit: z.coerce.number().int().min(1).max(100).default(50),
+					offset: z.coerce.number().int().min(0).default(0),
 				}),
 			)
 			.output(
@@ -73,15 +105,29 @@ export const contract = {
 					total: z.number().int().min(0),
 				}),
 			),
-		update: oc
+		approve: oc
 			.route({
 				method: 'POST',
-				path: '/follow-requests/{id}',
+				path: '/follow-requests/{id}/approve',
 			})
 			.input(
 				z.object({
 					id: z.string().min(1),
-					status: z.enum(['approved', 'rejected']),
+				}),
+			)
+			.output(
+				z.object({
+					success: z.boolean(),
+				}),
+			),
+		reject: oc
+			.route({
+				method: 'POST',
+				path: '/follow-requests/{id}/reject',
+			})
+			.input(
+				z.object({
+					id: z.string().min(1),
 				}),
 			)
 			.output(
@@ -98,8 +144,8 @@ export const contract = {
 			})
 			.input(
 				z.object({
-					limit: z.number().int().min(1).max(100).default(50),
-					offset: z.number().int().min(0).default(0),
+					limit: z.coerce.number().int().min(1).max(100).default(50),
+					offset: z.coerce.number().int().min(0).default(0),
 				}),
 			)
 			.output(

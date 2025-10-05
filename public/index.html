@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActivityPub Relay - Admin Panel</title>
+    <style>
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fa;
+            --text-primary: #2d3748;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --border-accent: #cbd5e0;
+            --button-primary: #4299e1;
+            --button-primary-hover: #3182ce;
+            --button-danger: #e53e3e;
+            --button-danger-hover: #c53030;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --success-border: #c3e6cb;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --error-border: #f5c6cb;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a202c;
+                --bg-secondary: #2d3748;
+                --bg-tertiary: #4a5568;
+                --text-primary: #f7fafc;
+                --text-secondary: #cbd5e0;
+                --border-color: #4a5568;
+                --border-accent: #718096;
+                --button-primary: #4299e1;
+                --button-primary-hover: #3182ce;
+                --button-danger: #fc8181;
+                --button-danger-hover: #f56565;
+                --success-bg: #2f855a;
+                --success-text: #f0fff4;
+                --success-border: #38a169;
+                --error-bg: #c53030;
+                --error-text: #fff5f5;
+                --error-border: #e53e3e;
+                --shadow: rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        body.light-mode {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fa;
+            --text-primary: #2d3748;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --border-accent: #cbd5e0;
+            --button-primary: #4299e1;
+            --button-primary-hover: #3182ce;
+            --button-danger: #e53e3e;
+            --button-danger-hover: #c53030;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --success-border: #c3e6cb;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --error-border: #f5c6cb;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode {
+            --bg-primary: #1a202c;
+            --bg-secondary: #2d3748;
+            --bg-tertiary: #4a5568;
+            --text-primary: #f7fafc;
+            --text-secondary: #cbd5e0;
+            --border-color: #4a5568;
+            --border-accent: #718096;
+            --button-primary: #4299e1;
+            --button-primary-hover: #3182ce;
+            --button-danger: #fc8181;
+            --button-danger-hover: #f56565;
+            --success-bg: #2f855a;
+            --success-text: #f0fff4;
+            --success-border: #38a169;
+            --error-bg: #c53030;
+            --error-text: #fff5f5;
+            --error-border: #e53e3e;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--shadow);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            flex: 1;
+        }
+
+        h1 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--border-accent);
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-accent);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--button-primary);
+        }
+
+        button {
+            background: var(--button-primary);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--button-primary-hover);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: var(--button-danger);
+        }
+
+        button.danger:hover {
+            background: var(--button-danger-hover);
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        .response.success {
+            background: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
+        }
+
+        .response.error {
+            background: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-border);
+        }
+
+        .requests-list {
+            margin-top: 20px;
+        }
+
+        .request-item {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .request-info {
+            flex: 1;
+        }
+
+        .request-id {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .request-actor {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .request-actions button {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .api-key-input {
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>ActivityPub Relay - Admin Panel</h1>
+                <p class="subtitle">Manage your ActivityPub relay instance</p>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                🌙
+            </button>
+        </div>
+
+        <div class="section api-key-input">
+            <h2>API Key</h2>
+            <div class="form-group">
+                <label for="apiKey">API Key (必須)</label>
+                <input type="password" id="apiKey" placeholder="Enter your API key">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>フォロー申請一覧</h2>
+            <button onclick="loadFollowRequests()">申請を読み込む</button>
+            <div id="followRequestsList" class="requests-list"></div>
+            <div id="followRequestsResponse" class="response"></div>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <h2>設定取得</h2>
+                <div class="form-group">
+                    <label for="getSettingKey">設定キー</label>
+                    <select id="getSettingKey">
+                        <option value="auto_approve_follows">auto_approve_follows</option>
+                    </select>
+                </div>
+                <button onclick="getSetting()">取得</button>
+                <div id="getSettingResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h2>設定更新</h2>
+                <div class="form-group">
+                    <label for="updateSettingKey">設定キー</label>
+                    <select id="updateSettingKey">
+                        <option value="auto_approve_follows">auto_approve_follows</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="updateSettingValue">値</label>
+                    <select id="updateSettingValue">
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                    </select>
+                </div>
+                <button onclick="updateSetting()">更新</button>
+                <div id="updateSettingResponse" class="response"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>ドメインルール追加</h2>
+            <div class="form-group">
+                <label for="domainPattern">ドメインパターン</label>
+                <input type="text" id="domainPattern" placeholder="example.com">
+            </div>
+            <div class="form-group">
+                <label for="isRegex">正規表現</label>
+                <select id="isRegex">
+                    <option value="false">いいえ</option>
+                    <option value="true">はい</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reason">理由 (オプション)</label>
+                <input type="text" id="reason" placeholder="Spam domain">
+            </div>
+            <button onclick="addDomainRule()">追加</button>
+            <div id="addDomainRuleResponse" class="response"></div>
+        </div>
+
+        <div class="section">
+            <h2>ドメインルール一覧</h2>
+            <button onclick="listDomainRules()">ルールを読み込む</button>
+            <div id="domainRulesList" class="requests-list"></div>
+            <div id="listDomainRulesResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // テーマ管理
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // 初期テーマ設定
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const themeToggle = document.getElementById('themeToggle');
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                document.body.classList.add('light-mode');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // ページ読み込み時にテーマを初期化
+        initTheme();
+
+        function getHeaders() {
+            const apiKey = document.getElementById('apiKey').value;
+            return {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey
+            };
+        }
+
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${isError ? 'error' : 'success'}`;
+            element.style.display = 'block';
+        }
+
+        async function loadFollowRequests() {
+            try {
+                const params = new URLSearchParams({
+                    limit: '50',
+                    offset: '0'
+                });
+                const response = await fetch(`${API_BASE}/follow-requests?${params}`, {
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showResponse('followRequestsResponse', data, true);
+                    return;
+                }
+
+                const listElement = document.getElementById('followRequestsList');
+                if (data.requests && data.requests.length > 0) {
+                    listElement.innerHTML = data.requests.map(req => `
+                        <div class="request-item">
+                            <div class="request-info">
+                                <div class="request-id">ID: ${req.id}</div>
+                                <div class="request-actor">Actor: ${req.actorId}</div>
+                            </div>
+                            <div class="request-actions">
+                                <button onclick="approveRequest('${req.id}')">承認</button>
+                                <button class="danger" onclick="rejectRequest('${req.id}')">拒否</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listElement.innerHTML = '<p>フォロー申請はありません</p>';
+                }
+
+                showResponse('followRequestsResponse', data);
+            } catch (error) {
+                showResponse('followRequestsResponse', { error: error.message }, true);
+            }
+        }
+
+        async function approveRequest(id) {
+            try {
+                const response = await fetch(`${API_BASE}/follow-requests/${encodeURIComponent(id)}/approve`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('承認しました');
+                    loadFollowRequests();
+                } else {
+                    showResponse('followRequestsResponse', data, true);
+                }
+            } catch (error) {
+                showResponse('followRequestsResponse', { error: error.message }, true);
+            }
+        }
+
+        async function rejectRequest(id) {
+            try {
+                const response = await fetch(`${API_BASE}/follow-requests/${encodeURIComponent(id)}/reject`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('拒否しました');
+                    loadFollowRequests();
+                } else {
+                    showResponse('followRequestsResponse', data, true);
+                }
+            } catch (error) {
+                showResponse('followRequestsResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getSetting() {
+            const key = document.getElementById('getSettingKey').value;
+            try {
+                const response = await fetch(`${API_BASE}/settings/${key}`, {
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+                showResponse('getSettingResponse', data, !response.ok);
+            } catch (error) {
+                showResponse('getSettingResponse', { error: error.message }, true);
+            }
+        }
+
+        async function updateSetting() {
+            const key = document.getElementById('updateSettingKey').value;
+            const value = document.getElementById('updateSettingValue').value;
+            try {
+                const response = await fetch(`${API_BASE}/settings/${key}`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ value })
+                });
+                const data = await response.json();
+                showResponse('updateSettingResponse', data, !response.ok);
+            } catch (error) {
+                showResponse('updateSettingResponse', { error: error.message }, true);
+            }
+        }
+
+        async function addDomainRule() {
+            const pattern = document.getElementById('domainPattern').value;
+            const isRegex = document.getElementById('isRegex').value === 'true';
+            const reason = document.getElementById('reason').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/domain-rules`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        pattern,
+                        is_regex: isRegex,
+                        reason: reason || undefined
+                    })
+                });
+                const data = await response.json();
+                showResponse('addDomainRuleResponse', data, !response.ok);
+
+                if (response.ok) {
+                    document.getElementById('domainPattern').value = '';
+                    document.getElementById('reason').value = '';
+                }
+            } catch (error) {
+                showResponse('addDomainRuleResponse', { error: error.message }, true);
+            }
+        }
+
+        async function listDomainRules() {
+            try {
+                const params = new URLSearchParams({
+                    limit: '50',
+                    offset: '0'
+                });
+                const response = await fetch(`${API_BASE}/domain-rules?${params}`, {
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showResponse('listDomainRulesResponse', data, true);
+                    return;
+                }
+
+                const listElement = document.getElementById('domainRulesList');
+                if (data.rules && data.rules.length > 0) {
+                    listElement.innerHTML = data.rules.map(rule => `
+                        <div class="request-item">
+                            <div class="request-info">
+                                <div class="request-id">${rule.pattern} ${rule.is_regex ? '(正規表現)' : ''}</div>
+                                <div class="request-actor">${rule.reason || 'No reason'}</div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="danger" onclick="deleteDomainRule(${rule.id})">削除</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listElement.innerHTML = '<p>ドメインルールはありません</p>';
+                }
+
+                showResponse('listDomainRulesResponse', data);
+            } catch (error) {
+                showResponse('listDomainRulesResponse', { error: error.message }, true);
+            }
+        }
+
+        async function deleteDomainRule(id) {
+            if (!confirm('このルールを削除しますか?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/domain-rules/${id}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('削除しました');
+                    listDomainRules();
+                } else {
+                    showResponse('listDomainRulesResponse', data, true);
+                }
+            } catch (error) {
+                showResponse('listDomainRulesResponse', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>
