@@ -1,0 +1,17 @@
+# Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+
+# RSA Public Key (PEM format)
+# Generate with: openssl genrsa -out private_key.pem 2048 && openssl rsa -in private_key.pem -pubout -out public_key.pem
+PUBLICKEY=-----BEGIN PUBLIC KEY-----
+YOUR_PUBLIC_KEY_HERE
+-----END PUBLIC KEY-----
+
+# RSA Private Key (PEM format)
+PRIVATEKEY=-----BEGIN PRIVATE KEY-----
+YOUR_PRIVATE_KEY_HERE
+-----END PRIVATE KEY-----
+
+# API Key for admin panel access
+# Generate a strong random key with: openssl rand -base64 64
+API_KEY=your-secure-api-key-here
