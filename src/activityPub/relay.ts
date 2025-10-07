@@ -43,27 +43,8 @@ export const relayActivity = async (
 
 	const prisma = createPrismaClient(context.env.DB);
 	try {
-		// 承認済みのフォローリクエストを持つアクターを取得
-		const approvedFollowRequests = await prisma.followRequest.findMany({
-			where: { status: 'approved' },
-			select: {
-				actor: true,
-			},
-			distinct: ['actor'],
-		});
-
-		if (approvedFollowRequests.length === 0) {
-			return { success: false, relayedCount: 0, failureCount: 0 };
-		}
-
-		// アクター情報を取得
-		const actorIds = approvedFollowRequests
-			.map((fr) => fr.actor)
-			.filter((id): id is string => id !== null);
-		const actors = await prisma.actor.findMany({
-			where: {
-				id: { in: actorIds },
-			},
+		// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
+		const followers = await prisma.actor.findMany({
 			select: {
 				id: true,
 				inbox: true,
@@ -71,7 +52,7 @@ export const relayActivity = async (
 			},
 		});
 
-		if (actors.length === 0) {
+		if (followers.length === 0) {
 			return { success: false, relayedCount: 0, failureCount: 0 };
 		}
 
@@ -84,7 +65,7 @@ export const relayActivity = async (
 		};
 
 		const originHost = safeHostname(activity.actor);
-		const recipients = actors.filter((follower) => {
+		const recipients = followers.filter((follower) => {
 			if (!originHost) return true;
 			const followerHost = safeHostname(follower.id);
 			return followerHost !== originHost;
