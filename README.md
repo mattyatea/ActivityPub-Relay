@@ -10,16 +10,16 @@
 
 ## 前提条件
 
-- [Cloudflareアカウント](https://cloudflare.com/) - Workersへのデプロイ用
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) - Cloudflare Workers CLI（開発依存としてインストール済み）
+- [Cloudflareアカウント](https://cloudflare.com/) 
 
 ## 機能
 
-- **ActivityPubプロトコルサポート**: コアとなるActivityPubリレー機能を実装
-- **HTTP署名検証**: セキュリティのため、受信するアクティビティの署名を検証
-- **アクティビティタイプ**: Follow、Undo、Create、Announceアクティビティに対応
-- **Cloudflare D1**: フォロワーの関係性を保存するためのD1データベースを使用
-- **WebFinger & NodeInfo**: フェデレーション検出のための`.well-known`エンドポイントを実装
+- [x] 基本的な投稿リレー機能
+- [x] HTTP署名
+- [x] WebFingerおよびNodeInfoのサポート
+- [ ] Queue機能
+- [ ] レート制限機能
+- [ ] 管理用ダッシュボード
 
 ## セットアップ
 
@@ -171,15 +171,15 @@ A simple ActivityPub relay server built with [Hono](https://hono.dev/), TypeScri
 ### Prerequisites
 
 - [Cloudflare account](https://cloudflare.com/) - For deploying to Workers
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) - Cloudflare Workers CLI (installed as dev dependency)
 
 ### Features
 
-- **ActivityPub Protocol Support**: Implements core ActivityPub relay functionality
-- **HTTP Signature Verification**: Verifies incoming activity signatures for security
-- **Activity Types**: Supports Follow, Undo, Create, and Announce activities
-- **Cloudflare D1**: Uses D1 database for storing follower relationships
-- **WebFinger & NodeInfo**: Implements `.well-known` endpoints for federation discovery
+- [x] Basic post relay functionality
+- [x] HTTP Signatures
+- [x] WebFinger and NodeInfo support
+- [ ] Queue functionality
+- [ ] Rate limiting
+- [ ] Admin dashboard
 
 ### Getting Started
 
