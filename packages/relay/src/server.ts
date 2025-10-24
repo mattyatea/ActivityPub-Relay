@@ -17,6 +17,8 @@ const relayActivityTypes = new Set([
 	'Update',
 	'Delete',
 	'Remove',
+	'Add',
+	'Like',
 ]);
 
 // Static assets can be served without full environment check
