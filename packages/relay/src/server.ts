@@ -10,7 +10,7 @@ import { logger, sanitizeError } from '@/utils/logger.ts';
 
 const app = new Hono<{ Bindings: Env }>();
 
-const relayActivityType = ['Create', 'Announce', 'Update', 'Delete'];
+const relayActivityType = ['Create', 'Announce', 'Update', 'Delete', 'Remove'];
 
 // Static assets can be served without full environment check
 app.get('/assets/*', async (c) => {
