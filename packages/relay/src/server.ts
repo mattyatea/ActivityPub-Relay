@@ -4,7 +4,7 @@ import { followActivity } from '@/activityPub/follow.ts';
 import { relayActivity } from '@/activityPub/relay.ts';
 import { undoActivity } from '@/activityPub/undo.ts';
 import { router } from '@/api/router.ts';
-import type { APRequest } from '@/types/activityPubTypes';
+import type { APActor, APRequest } from '@/types/activityPubTypes';
 import { verifySignature } from '@/utils/httpSignature';
 import { logger, sanitizeError } from '@/utils/logger.ts';
 
@@ -103,7 +103,7 @@ app.post('/inbox', async (c) => {
 		actor: activity.actor,
 	});
 
-	let verificationResult;
+	let verificationResult: { isValid: boolean; actor: APActor } | null = null;
 	try {
 		verificationResult = await verifySignature(c.req.raw);
 	} catch (error) {
