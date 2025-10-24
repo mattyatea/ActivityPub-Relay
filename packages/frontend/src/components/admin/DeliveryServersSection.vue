@@ -99,10 +99,18 @@ const extractDomain = (url: string): string => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 8px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+}
+
+.list-item:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .list-item-info {
@@ -116,34 +124,42 @@ const extractDomain = (url: string): string => {
   font-size: 13px;
   font-family: monospace;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .list-item-text {
   font-size: 13px;
   color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .list-footer {
   text-align: center;
-  padding: 12px;
+  padding: 16px;
   color: var(--text-secondary);
   font-size: 13px;
   border-top: 1px solid var(--border-color);
   margin-top: 8px;
+  background: var(--bg-primary);
+  border-radius: 0 0 8px 8px;
 }
 
 .remove-button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 13px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background-color: transparent;
+  color: var(--button-danger);
+  border: 2px solid var(--button-danger);
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .remove-button:hover {
-  background-color: #c82333;
+  background-color: var(--button-danger);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 </style>

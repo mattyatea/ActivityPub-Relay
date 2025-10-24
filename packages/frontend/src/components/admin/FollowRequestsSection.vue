@@ -72,10 +72,18 @@ const loadingActions = reactive({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 8px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+}
+
+.list-item:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .list-item-info {
@@ -89,11 +97,13 @@ const loadingActions = reactive({
   font-size: 13px;
   font-family: monospace;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .list-item-text {
   font-size: 13px;
   color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .list-item-actions {
@@ -102,7 +112,7 @@ const loadingActions = reactive({
 }
 
 .list-item-actions button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 13px;
 }
 

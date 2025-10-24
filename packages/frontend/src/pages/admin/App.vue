@@ -289,13 +289,28 @@ const handleRemoveActor = async (actorId: string) => {
 
 <style scoped>
 .admin {
-  max-width: 800px;
+  width: 800px;
+  max-width: calc(100vw - 40px);
   margin: 0 auto;
+  padding: 32px 20px;
 }
 
 .admin h1 {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 700;
   margin-bottom: 24px;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .admin {
+    width: 100%;
+    max-width: calc(100vw - 32px);
+    padding: 20px 16px;
+  }
+
+  .admin h1 {
+    font-size: 24px;
+  }
 }
 </style>

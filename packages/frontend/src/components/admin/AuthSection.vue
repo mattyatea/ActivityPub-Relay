@@ -23,7 +23,7 @@
         class="toggle-visibility"
         :aria-label="showApiKey ? 'Hide API key' : 'Show API key'"
       >
-        {{ showApiKey ? '👁' : '👁‍🗨' }}
+        {{ showApiKey ? 'Hide' : 'Show' }}
       </button>
       <button v-if="authenticated" @click="handleLogout" class="danger">
         Disconnect
@@ -79,7 +79,16 @@ const handleLogout = () => {
 }
 
 .toggle-visibility {
-  padding: 8px 12px;
-  font-size: 16px;
+  padding: 10px 16px;
+  font-size: 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.toggle-visibility:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 </style>

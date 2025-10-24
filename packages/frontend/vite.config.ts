@@ -119,23 +119,23 @@ export default defineConfig({
 		open: false,
 		proxy: {
 			'^/api/(?!.*\\.(ts|js|vue)$)': {
-				target: 'http://localhost:3000',
+				target: 'http://localhost:8787',
 				changeOrigin: true,
 			},
 			'/.well-known': {
-				target: 'http://localhost:3000',
+				target: 'http://localhost:8787',
 				changeOrigin: true,
 			},
 			'/actor': {
-				target: 'http://localhost:3000',
+				target: 'http://localhost:8787',
 				changeOrigin: true,
 			},
 			'/inbox': {
-				target: 'http://localhost:3000',
+				target: 'http://localhost:8787',
 				changeOrigin: true,
 			},
 			'/nodeinfo': {
-				target: 'http://localhost:3000',
+				target: 'http://localhost:8787',
 				changeOrigin: true,
 			},
 		},

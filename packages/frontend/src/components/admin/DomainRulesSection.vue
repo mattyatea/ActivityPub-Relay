@@ -167,10 +167,18 @@ const handleAddRule = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 8px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+}
+
+.list-item:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .list-item-info {
@@ -185,6 +193,7 @@ const handleAddRule = () => {
   font-size: 13px;
   font-family: monospace;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .rule-reason {
@@ -194,10 +203,13 @@ const handleAddRule = () => {
 }
 
 .badge {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 3px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
   background: #3b82f6;
   color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>

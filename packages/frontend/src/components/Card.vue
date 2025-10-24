@@ -23,43 +23,50 @@ defineProps<{
 .card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-  padding: 16px;
+  padding: 20px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .card-header h3 {
   margin: 0;
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
 }
 
 .card-body {
-  padding: 16px;
+  padding: 20px;
 }
 
 .card-footer {
-  padding: 12px 16px;
-  background: var(--bg-secondary);
+  padding: 16px 20px;
+  background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 8px;
 }
 
 .card.success {
-  border-left: 3px solid #22c55e;
+  border-left: 4px solid #22c55e;
 }
 
 .card.error {
-  border-left: 3px solid var(--button-danger);
+  border-left: 4px solid var(--button-danger);
 }
 
 .card.warning {
-  border-left: 3px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
 }
 </style>

@@ -122,12 +122,13 @@ input,
 textarea,
 select {
 	width: 100%;
-	padding: 10px;
-	border: 1px solid var(--border-color);
-	border-radius: 4px;
+	padding: 10px 12px;
+	border: 2px solid var(--border-color);
+	border-radius: 6px;
 	font-size: 14px;
 	background: var(--bg-primary);
 	color: var(--text-primary);
+	transition: all 0.2s ease;
 }
 
 input:focus,
@@ -135,6 +136,13 @@ textarea:focus,
 select:focus {
 	outline: none;
 	border-color: var(--text-primary);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+input:hover:not(:focus),
+textarea:hover:not(:focus),
+select:hover:not(:focus) {
+	border-color: var(--text-secondary);
 }
 
 button {
@@ -142,14 +150,27 @@ button {
 	color: var(--bg-primary);
 	padding: 10px 20px;
 	border: 1px solid var(--button-primary);
-	border-radius: 4px;
+	border-radius: 6px;
 	font-size: 14px;
+	font-weight: 500;
 	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
 	background: var(--button-primary-hover);
 	border-color: var(--button-primary-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:active:not(:disabled) {
+	transform: translateY(0);
+}
+
+button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 button.danger {
@@ -158,9 +179,11 @@ button.danger {
 	border-color: var(--button-danger);
 }
 
-button.danger:hover {
+button.danger:hover:not(:disabled) {
 	background: var(--button-danger);
 	color: white;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
 code {
