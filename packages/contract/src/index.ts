@@ -24,6 +24,13 @@ const DomainRuleSchema = z.object({
 	createdAt: z.number().int().optional(),
 });
 
+const ActorSchema = z.object({
+	id: z.string().url(),
+	inbox: z.string().url(),
+	sharedInbox: z.string().url().nullable(),
+	publicKey: z.string().nullable(),
+});
+
 // Contract Definition
 export const contract = {
 	settings: {
@@ -185,6 +192,25 @@ export const contract = {
 			.output(
 				z.object({
 					success: z.boolean(),
+				}),
+			),
+	},
+	actors: {
+		list: oc
+			.route({
+				method: 'GET',
+				path: '/actors',
+			})
+			.input(
+				z.object({
+					limit: z.coerce.number().int().min(1).max(100).default(50),
+					offset: z.coerce.number().int().min(0).default(0),
+				}),
+			)
+			.output(
+				z.object({
+					actors: z.array(ActorSchema),
+					total: z.number().int().min(0),
 				}),
 			),
 	},

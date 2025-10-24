@@ -59,6 +59,24 @@
       </div>
     </Card>
 
+    <!-- Delivery Servers Section -->
+    <Card v-if="authenticated" title="Delivery Servers" class="section">
+      <div v-if="actors.length === 0" class="empty">
+        <p>No servers currently being delivered to</p>
+      </div>
+      <div v-else class="list">
+        <div v-for="actor in actors" :key="actor.id" class="list-item">
+          <div class="list-item-info">
+            <div class="list-item-id">{{ extractDomain(actor.id) }}</div>
+            <div class="list-item-text">{{ actor.inbox }}</div>
+          </div>
+        </div>
+        <div v-if="actorTotal > actors.length" class="list-footer">
+          <p>Showing {{ actors.length }} of {{ actorTotal }} servers</p>
+        </div>
+      </div>
+    </Card>
+
     <!-- Domain Rules Section -->
     <Card v-if="authenticated" title="Domain Rules" class="section">
       <div class="form-group">
@@ -123,6 +141,8 @@ const settings = ref({
 
 const followRequests = ref<Array<{ id: string; actorId: string; status: string }>>([])
 const domainRules = ref<Array<{ id: number; pattern: string; isRegex: boolean; reason?: string }>>([])
+const actors = ref<Array<{ id: string; inbox: string; sharedInbox: string | null; publicKey: string | null }>>([])
+const actorTotal = ref(0)
 const newRule = ref({ pattern: '', isRegex: false, reason: '' })
 
 const showAlert = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
@@ -162,7 +182,18 @@ const logout = () => {
   authenticated.value = false
   followRequests.value = []
   domainRules.value = []
+  actors.value = []
+  actorTotal.value = 0
   showAlert('Disconnected', 'info')
+}
+
+const extractDomain = (url: string): string => {
+  try {
+    const urlObj = new URL(url)
+    return urlObj.hostname
+  } catch {
+    return url
+  }
 }
 
 const loadData = async () => {
@@ -184,6 +215,14 @@ const loadData = async () => {
     offset: 0
   })
   domainRules.value = rulesData.rules
+
+  // Load actors (delivery servers)
+  const actorsData = await orpc.actors.list({
+    limit: 100,
+    offset: 0
+  })
+  actors.value = actorsData.actors
+  actorTotal.value = actorsData.total
 }
 
 const approveFollow = async (id: string) => {
@@ -192,6 +231,10 @@ const approveFollow = async (id: string) => {
     if (result.success) {
       followRequests.value = followRequests.value.filter((r) => r.id !== id)
       showAlert('Follow request approved!', 'success')
+      // Reload actors list to include the newly approved server
+      const actorsData = await orpc.actors.list({ limit: 100, offset: 0 })
+      actors.value = actorsData.actors
+      actorTotal.value = actorsData.total
     } else {
       showAlert('Failed to approve follow', 'error')
     }
@@ -385,6 +428,15 @@ const updateSettings = async () => {
 
 .badge.blacklist {
   background: var(--button-danger);
+}
+
+.list-footer {
+  text-align: center;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {

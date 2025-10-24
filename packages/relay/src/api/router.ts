@@ -17,6 +17,9 @@ import {
 	getSettingByKey as getSettingByKeyService,
 	updateSettingByKey as updateSettingByKeyService,
 } from '@/service/SettingsService';
+import {
+	listActors as listActorsService,
+} from '@/service/ActorService';
 
 type Context = {
 	env: Bindings;
@@ -170,6 +173,18 @@ const removeDomainRule = os.domainRules.remove.handler(
 	},
 );
 
+// ============================================================
+// Actors API
+// ============================================================
+
+/**
+ * GET /api/actors/list
+ * 配送中のサーバー一覧を取得
+ */
+const listActors = os.actors.list.handler(async ({ input, context }) => {
+	return await listActorsService(input.limit, input.offset, context.env);
+});
+
 export const router = os.router({
 	settings: {
 		get: getSettings,
@@ -186,5 +201,8 @@ export const router = os.router({
 		list: listDomainRules,
 		add: addDomainRule,
 		remove: removeDomainRule,
+	},
+	actors: {
+		list: listActors,
 	},
 });
