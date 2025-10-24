@@ -87,6 +87,19 @@ export default defineConfig({
 			gzipSize: true,
 			brotliSize: true,
 		}),
+		{
+			name: 'dev-server-index',
+			configureServer(server) {
+				server.middlewares.use((req, _res, next) => {
+					if (req.url === '/') {
+						req.url = '/pages/index/index.html';
+					} else if (req.url === '/admin' || req.url === '/admin/') {
+						req.url = '/pages/admin/index.html';
+					}
+					next();
+				});
+			},
+		},
 	],
 	define: {
 		// Enable production mode optimizations
