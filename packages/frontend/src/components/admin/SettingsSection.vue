@@ -14,33 +14,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import Card from '../Card.vue'
-import type { Settings } from '../../types/api'
+import { ref, watch } from 'vue';
+import type { Settings } from '../../types/api';
+import Card from '../Card.vue';
 
 interface Props {
-  settings: Settings
-  saving?: boolean
+	settings: Settings;
+	saving?: boolean;
 }
 
-interface Emits {
-  (e: 'save', settings: Settings): void
-}
+type Emits = (e: 'save', settings: Settings) => void;
 
 const props = withDefaults(defineProps<Props>(), {
-  saving: false
-})
-const emit = defineEmits<Emits>()
+	saving: false,
+});
+const emit = defineEmits<Emits>();
 
-const localSettings = ref<Settings>({ ...props.settings })
+const localSettings = ref<Settings>({ ...props.settings });
 
-watch(() => props.settings, (newSettings) => {
-  localSettings.value = { ...newSettings }
-}, { deep: true })
+watch(
+	() => props.settings,
+	(newSettings) => {
+		localSettings.value = { ...newSettings };
+	},
+	{ deep: true },
+);
 
 const handleSave = () => {
-  emit('save', localSettings.value)
-}
+	emit('save', localSettings.value);
+};
 </script>
 
 <style scoped>

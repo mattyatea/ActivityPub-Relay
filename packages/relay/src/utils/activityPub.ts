@@ -1,4 +1,3 @@
-import type { Bindings } from '@/server.ts';
 import type { APActor, APRequest } from '@/types/activityPubTypes.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 
@@ -116,7 +115,7 @@ export async function fetchActor(keyId: string): Promise<APActor> {
 export async function acceptFollow(
 	activity: APRequest,
 	targetInbox: string,
-	env: Bindings,
+	env: Env,
 ) {
 	const id = idGenerator();
 	const body: APRequest = {
@@ -133,7 +132,7 @@ export async function acceptFollow(
 export async function rejectFollow(
 	activity: APRequest,
 	targetInbox: string,
-	env: Bindings,
+	env: Env,
 ) {
 	const id = idGenerator();
 	const body: APRequest = {
@@ -142,6 +141,41 @@ export async function rejectFollow(
 		type: 'Reject',
 		actor: `https://${env.HOSTNAME}/actor`,
 		object: activity,
+	};
+	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
+	await sendActivity(targetInbox, body, headers);
+}
+
+/**
+ * フォロワーを削除するためのReject Activityを送信する
+ * 既存のフォロワーに対してフォロー関係を解除する
+ *
+ * @param actorId - 削除対象のアクターID
+ * @param targetInbox - 送信先のinbox URL
+ * @param env - 環境変数
+ */
+export async function removeFollower(
+	actorId: string,
+	targetInbox: string,
+	env: Env,
+) {
+	const id = idGenerator();
+	// フォローを解除するためのReject Activityを構築
+	// オリジナルのFollow activityを再構築
+	const originalFollow: APRequest = {
+		'@context': ['https://www.w3.org/ns/activitystreams'],
+		id: `${actorId}#follows/${Date.now()}`,
+		type: 'Follow',
+		actor: actorId,
+		object: `https://${env.HOSTNAME}/actor`,
+	};
+
+	const body: APRequest = {
+		'@context': ['https://www.w3.org/ns/activitystreams'],
+		id: `https://${env.HOSTNAME}/activity/${id}`,
+		type: 'Reject',
+		actor: `https://${env.HOSTNAME}/actor`,
+		object: originalFollow,
 	};
 	const headers = signHeaders(JSON.stringify(body), targetInbox, env);
 	await sendActivity(targetInbox, body, headers);

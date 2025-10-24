@@ -1,191 +1,196 @@
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --border-color: #e5e5e5;
-  --button-primary: #000000;
-  --button-primary-hover: #333333;
-  --button-danger: #dc2626;
-  --button-danger-hover: #b91c1c;
-  --success-bg: #d1fae5;
-  --success-text: #065f46;
-  --error-bg: #fee2e2;
-  --error-text: #991b1b;
+	--bg-primary: #ffffff;
+	--bg-secondary: #fafafa;
+	--text-primary: #1a1a1a;
+	--text-secondary: #666666;
+	--border-color: #e5e5e5;
+	--button-primary: #000000;
+	--button-primary-hover: #333333;
+	--button-danger: #dc2626;
+	--button-danger-hover: #b91c1c;
+	--success-bg: #d1fae5;
+	--success-text: #065f46;
+	--error-bg: #fee2e2;
+	--error-text: #991b1b;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --text-primary: #ffffff;
-    --text-secondary: #a3a3a3;
-    --border-color: #333333;
-    --button-primary: #ffffff;
-    --button-primary-hover: #e5e5e5;
-    --button-danger: #ef4444;
-    --button-danger-hover: #dc2626;
-    --success-bg: #064e3b;
-    --success-text: #d1fae5;
-    --error-bg: #7f1d1d;
-    --error-text: #fecaca;
-  }
+	:root {
+		--bg-primary: #0a0a0a;
+		--bg-secondary: #1a1a1a;
+		--text-primary: #ffffff;
+		--text-secondary: #a3a3a3;
+		--border-color: #333333;
+		--button-primary: #ffffff;
+		--button-primary-hover: #e5e5e5;
+		--button-danger: #ef4444;
+		--button-danger-hover: #dc2626;
+		--success-bg: #064e3b;
+		--success-text: #d1fae5;
+		--error-bg: #7f1d1d;
+		--error-text: #fecaca;
+	}
 }
 
 body.light-mode {
-  --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --border-color: #e5e5e5;
-  --button-primary: #000000;
-  --button-primary-hover: #333333;
-  --button-danger: #dc2626;
-  --button-danger-hover: #b91c1c;
-  --success-bg: #d1fae5;
-  --success-text: #065f46;
-  --error-bg: #fee2e2;
-  --error-text: #991b1b;
+	--bg-primary: #ffffff;
+	--bg-secondary: #fafafa;
+	--text-primary: #1a1a1a;
+	--text-secondary: #666666;
+	--border-color: #e5e5e5;
+	--button-primary: #000000;
+	--button-primary-hover: #333333;
+	--button-danger: #dc2626;
+	--button-danger-hover: #b91c1c;
+	--success-bg: #d1fae5;
+	--success-text: #065f46;
+	--error-bg: #fee2e2;
+	--error-text: #991b1b;
 }
 
 body.dark-mode {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #1a1a1a;
-  --text-primary: #ffffff;
-  --text-secondary: #a3a3a3;
-  --border-color: #333333;
-  --button-primary: #ffffff;
-  --button-primary-hover: #e5e5e5;
-  --button-danger: #ef4444;
-  --button-danger-hover: #dc2626;
-  --success-bg: #064e3b;
-  --success-text: #d1fae5;
-  --error-bg: #7f1d1d;
-  --error-text: #fecaca;
+	--bg-primary: #0a0a0a;
+	--bg-secondary: #1a1a1a;
+	--text-primary: #ffffff;
+	--text-secondary: #a3a3a3;
+	--border-color: #333333;
+	--button-primary: #ffffff;
+	--button-primary-hover: #e5e5e5;
+	--button-danger: #ef4444;
+	--button-danger-hover: #dc2626;
+	--success-bg: #064e3b;
+	--success-text: #d1fae5;
+	--error-bg: #7f1d1d;
+	--error-text: #fecaca;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 html {
-  scroll-behavior: smooth;
+	scroll-behavior: smooth;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  line-height: 1.6;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+	background: var(--bg-primary);
+	color: var(--text-primary);
+	min-height: 100vh;
+	line-height: 1.6;
 }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 20px;
 }
 
 h1 {
-  color: var(--text-primary);
-  margin-bottom: 10px;
+	color: var(--text-primary);
+	margin-bottom: 10px;
 }
 
 h2 {
-  color: var(--text-primary);
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
+	color: var(--text-primary);
+	margin-bottom: 20px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--border-color);
 }
 
 h3 {
-  color: var(--text-primary);
-  margin-bottom: 15px;
-  margin-top: 20px;
+	color: var(--text-primary);
+	margin-bottom: 15px;
+	margin-top: 20px;
 }
 
 p {
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 15px;
+	color: var(--text-secondary);
+	line-height: 1.6;
+	margin-bottom: 15px;
 }
 
 .subtitle {
-  color: var(--text-secondary);
-  font-size: 14px;
+	color: var(--text-secondary);
+	font-size: 14px;
 }
 
-input, textarea, select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 14px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+input,
+textarea,
+select {
+	width: 100%;
+	padding: 10px;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	font-size: 14px;
+	background: var(--bg-primary);
+	color: var(--text-primary);
 }
 
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--text-primary);
+input:focus,
+textarea:focus,
+select:focus {
+	outline: none;
+	border-color: var(--text-primary);
 }
 
 button {
-  background: var(--button-primary);
-  color: var(--bg-primary);
-  padding: 10px 20px;
-  border: 1px solid var(--button-primary);
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
+	background: var(--button-primary);
+	color: var(--bg-primary);
+	padding: 10px 20px;
+	border: 1px solid var(--button-primary);
+	border-radius: 4px;
+	font-size: 14px;
+	cursor: pointer;
 }
 
 button:hover {
-  background: var(--button-primary-hover);
-  border-color: var(--button-primary-hover);
+	background: var(--button-primary-hover);
+	border-color: var(--button-primary-hover);
 }
 
 button.danger {
-  background: transparent;
-  color: var(--button-danger);
-  border-color: var(--button-danger);
+	background: transparent;
+	color: var(--button-danger);
+	border-color: var(--button-danger);
 }
 
 button.danger:hover {
-  background: var(--button-danger);
-  color: white;
+	background: var(--button-danger);
+	color: white;
 }
 
 code {
-  background: var(--bg-secondary);
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 13px;
-  color: var(--text-primary);
+	background: var(--bg-secondary);
+	padding: 2px 6px;
+	border-radius: 2px;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 13px;
+	color: var(--text-primary);
 }
 
 pre {
-  background: var(--bg-secondary);
-  padding: 15px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin-bottom: 15px;
-  border: 1px solid var(--border-color);
+	background: var(--bg-secondary);
+	padding: 15px;
+	border-radius: 4px;
+	overflow-x: auto;
+	margin-bottom: 15px;
+	border: 1px solid var(--border-color);
 }
 
 pre code {
-  background: none;
-  padding: 0;
+	background: none;
+	padding: 0;
 }
 
 a {
-  color: var(--button-primary);
-  text-decoration: none;
+	color: var(--button-primary);
+	text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline;
+	text-decoration: underline;
 }

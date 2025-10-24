@@ -33,35 +33,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import Card from '../Card.vue'
+import { ref } from 'vue';
+import Card from '../Card.vue';
 
 interface Props {
-  apiKey: string
-  authenticated: boolean
-  loading: boolean
+	apiKey: string;
+	authenticated: boolean;
+	loading: boolean;
 }
 
 interface Emits {
-  (e: 'connect', apiKey: string): void
-  (e: 'logout'): void
+	(e: 'connect', apiKey: string): void;
+	(e: 'logout'): void;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
-const localApiKey = ref(props.apiKey)
-const showApiKey = ref(false)
+const localApiKey = ref(props.apiKey);
+const showApiKey = ref(false);
 
 const handleConnect = () => {
-  if (localApiKey.value) {
-    emit('connect', localApiKey.value)
-  }
-}
+	if (localApiKey.value) {
+		emit('connect', localApiKey.value);
+	}
+};
 
 const handleLogout = () => {
-  emit('logout')
-}
+	emit('logout');
+};
 </script>
 
 <style scoped>

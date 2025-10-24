@@ -24,26 +24,26 @@
 
 <script setup lang="ts">
 interface Props {
-  isOpen: boolean
-  title: string
-  message: string
+	isOpen: boolean;
+	title: string;
+	message: string;
 }
 
 interface Emits {
-  (e: 'confirm'): void
-  (e: 'cancel'): void
+	(e: 'confirm'): void;
+	(e: 'cancel'): void;
 }
 
-defineProps<Props>()
-const emit = defineEmits<Emits>()
+defineProps<Props>();
+const emit = defineEmits<Emits>();
 
 const onConfirm = () => {
-  emit('confirm')
-}
+	emit('confirm');
+};
 
 const onCancel = () => {
-  emit('cancel')
-}
+	emit('cancel');
+};
 </script>
 
 <style scoped>

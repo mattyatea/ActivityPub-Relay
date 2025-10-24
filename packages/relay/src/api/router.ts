@@ -1,25 +1,26 @@
-import { implement } from '@orpc/server';
 import { contract } from '@activitypub-relay/contract';
+import { implement } from '@orpc/server';
 import type { Bindings } from '@/server.ts';
 import {
-	approveFollowRequest,
-	listFollowRequests as listFollowRequestsService,
-	rejectFollowRequest,
-} from '@/service/FollowService';
+	listActors as listActorsService,
+	removeActor as removeActorService,
+} from '@/service/ActorService';
 import {
 	addDomainRule as addDomainRuleService,
 	listDomainRules as listDomainRulesService,
 	removeDomainRule as removeDomainRuleService,
 } from '@/service/DomainRuleService';
 import {
-	getSettings as getSettingsService,
-	updateSettings as updateSettingsService,
-	getSettingByKey as getSettingByKeyService,
-	updateSettingByKey as updateSettingByKeyService,
-} from '@/service/SettingsService';
+	approveFollowRequest,
+	listFollowRequests as listFollowRequestsService,
+	rejectFollowRequest,
+} from '@/service/FollowService';
 import {
-	listActors as listActorsService,
-} from '@/service/ActorService';
+	getSettingByKey as getSettingByKeyService,
+	getSettings as getSettingsService,
+	updateSettingByKey as updateSettingByKeyService,
+	updateSettings as updateSettingsService,
+} from '@/service/SettingsService';
 
 type Context = {
 	env: Bindings;
@@ -43,37 +44,50 @@ const getSettings = os.settings.get.handler(async ({ context }) => {
  * POST /api/settings/update
  * 設定を更新
  */
-const updateSettings = os.settings.update.handler(async ({ input, context }) => {
-	const success = await updateSettingsService(input.domainBlockMode, context.env);
-	return { success };
-});
+const updateSettings = os.settings.update.handler(
+	async ({ input, context }) => {
+		const success = await updateSettingsService(
+			input.domainBlockMode,
+			context.env,
+		);
+		return { success };
+	},
+);
 
 /**
  * GET /api/settings/{key}
  * 個別の設定を取得
  */
-const getSettingByKey = os.settings.getByKey.handler(async ({ input, context }) => {
-	try {
-		return await getSettingByKeyService(input.key, context.env);
-	} catch (error) {
-		console.error('Failed to get setting by key:', error);
-		throw error;
-	}
-});
+const getSettingByKey = os.settings.getByKey.handler(
+	async ({ input, context }) => {
+		try {
+			return await getSettingByKeyService(input.key, context.env);
+		} catch (error) {
+			console.error('Failed to get setting by key:', error);
+			throw error;
+		}
+	},
+);
 
 /**
  * PUT /api/settings/{key}
  * 個別の設定を更新
  */
-const updateSettingByKey = os.settings.updateByKey.handler(async ({ input, context }) => {
-	try {
-		const success = await updateSettingByKeyService(input.key, input.value, context.env);
-		return { success };
-	} catch (error) {
-		console.error('Failed to update setting by key:', error);
-		return { success: false };
-	}
-});
+const updateSettingByKey = os.settings.updateByKey.handler(
+	async ({ input, context }) => {
+		try {
+			const success = await updateSettingByKeyService(
+				input.key,
+				input.value,
+				context.env,
+			);
+			return { success };
+		} catch (error) {
+			console.error('Failed to update setting by key:', error);
+			return { success: false };
+		}
+	},
+);
 
 // ============================================================
 // Follow Requests API
@@ -185,6 +199,20 @@ const listActors = os.actors.list.handler(async ({ input, context }) => {
 	return await listActorsService(input.limit, input.offset, context.env);
 });
 
+/**
+ * DELETE /api/actors/{id}
+ * フォロワー(配送サーバー)を削除
+ */
+const removeActor = os.actors.remove.handler(async ({ input, context }) => {
+	try {
+		const success = await removeActorService(input.id, context.env);
+		return { success };
+	} catch (error) {
+		console.error('Failed to remove actor:', error);
+		return { success: false };
+	}
+});
+
 export const router = os.router({
 	settings: {
 		get: getSettings,
@@ -204,5 +232,6 @@ export const router = os.router({
 	},
 	actors: {
 		list: listActors,
+		remove: removeActor,
 	},
 });

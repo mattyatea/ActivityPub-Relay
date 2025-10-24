@@ -9,51 +9,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue';
 
 const props = withDefaults(
-  defineProps<{
-    message: string
-    type?: 'success' | 'error' | 'warning' | 'info'
-    closeable?: boolean
-    autoDismiss?: boolean
-    dismissDuration?: number
-  }>(),
-  {
-    type: 'info',
-    closeable: true,
-    autoDismiss: true,
-    dismissDuration: 5000,
-  }
-)
+	defineProps<{
+		message: string;
+		type?: 'success' | 'error' | 'warning' | 'info';
+		closeable?: boolean;
+		autoDismiss?: boolean;
+		dismissDuration?: number;
+	}>(),
+	{
+		type: 'info',
+		closeable: true,
+		autoDismiss: true,
+		dismissDuration: 5000,
+	},
+);
 
-const visible = ref(true)
-let dismissTimer: ReturnType<typeof setTimeout> | null = null
+const visible = ref(true);
+let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 const icon = computed(() => {
-  const icons: Record<string, string> = {
-    success: '✓',
-    error: '✕',
-    warning: '!',
-    info: 'i',
-  }
-  return icons[props.type] || 'i'
-})
+	const icons: Record<string, string> = {
+		success: '✓',
+		error: '✕',
+		warning: '!',
+		info: 'i',
+	};
+	return icons[props.type] || 'i';
+});
 
 const close = () => {
-  visible.value = false
-  if (dismissTimer) {
-    clearTimeout(dismissTimer)
-  }
-}
+	visible.value = false;
+	if (dismissTimer) {
+		clearTimeout(dismissTimer);
+	}
+};
 
 onMounted(() => {
-  if (props.autoDismiss) {
-    dismissTimer = setTimeout(() => {
-      visible.value = false
-    }, props.dismissDuration)
-  }
-})
+	if (props.autoDismiss) {
+		dismissTimer = setTimeout(() => {
+			visible.value = false;
+		}, props.dismissDuration);
+	}
+});
 </script>
 
 <style scoped>

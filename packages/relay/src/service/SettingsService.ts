@@ -1,5 +1,4 @@
 import { createPrismaClient } from '@/lib/prisma';
-import type { Bindings } from '@/server.ts';
 import type { DomainBlockMode, SettingsResponse } from '@/types/api.ts';
 
 /**
@@ -8,7 +7,7 @@ import type { DomainBlockMode, SettingsResponse } from '@/types/api.ts';
  * @param env - 環境変数とD1データベース
  * @returns {Promise<SettingsResponse>}
  */
-export async function getSettings(env: Bindings): Promise<SettingsResponse> {
+export async function getSettings(env: Env): Promise<SettingsResponse> {
 	const prisma = createPrismaClient(env.DB);
 	try {
 		const modeSetting = await prisma.setting.findUnique({
@@ -16,8 +15,7 @@ export async function getSettings(env: Bindings): Promise<SettingsResponse> {
 		});
 
 		return {
-			domainBlockMode:
-				(modeSetting?.value as DomainBlockMode) ?? 'blacklist',
+			domainBlockMode: (modeSetting?.value as DomainBlockMode) ?? 'blacklist',
 		};
 	} finally {
 		await prisma.$disconnect();
@@ -33,7 +31,7 @@ export async function getSettings(env: Bindings): Promise<SettingsResponse> {
  */
 export async function updateSettings(
 	domainBlockMode: DomainBlockMode | undefined,
-	env: Bindings,
+	env: Env,
 ): Promise<boolean> {
 	const prisma = createPrismaClient(env.DB);
 	try {
@@ -63,7 +61,7 @@ export async function updateSettings(
  */
 export async function getSettingByKey(
 	key: string,
-	env: Bindings,
+	env: Env,
 ): Promise<{ key: string; value: string }> {
 	const prisma = createPrismaClient(env.DB);
 	try {
@@ -103,7 +101,7 @@ export async function getSettingByKey(
 export async function updateSettingByKey(
 	key: string,
 	value: string,
-	env: Bindings,
+	env: Env,
 ): Promise<boolean> {
 	const prisma = createPrismaClient(env.DB);
 	try {

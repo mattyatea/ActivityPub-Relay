@@ -58,52 +58,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
-import Card from '../Card.vue'
-import type { DomainRule, NewDomainRule } from '../../types/api'
+import { computed, reactive, ref } from 'vue';
+import type { DomainRule, NewDomainRule } from '../../types/api';
+import Card from '../Card.vue';
 
 interface Props {
-  domainRules: DomainRule[]
-  adding?: boolean
+	domainRules: DomainRule[];
+	adding?: boolean;
 }
 
 interface Emits {
-  (e: 'add', rule: NewDomainRule): void
-  (e: 'delete', id: number): void
+	(e: 'add', rule: NewDomainRule): void;
+	(e: 'delete', id: number): void;
 }
 
 withDefaults(defineProps<Props>(), {
-  adding: false
-})
-const emit = defineEmits<Emits>()
+	adding: false,
+});
+const emit = defineEmits<Emits>();
 
 const newRule = ref<NewDomainRule>({
-  pattern: '',
-  isRegex: false,
-  reason: ''
-})
+	pattern: '',
+	isRegex: false,
+	reason: '',
+});
 
-const deleting = reactive(new Set<number>())
+const deleting = reactive(new Set<number>());
 
 const isValidPattern = computed(() => {
-  if (!newRule.value.pattern) return true
-  if (newRule.value.isRegex) {
-    try {
-      new RegExp(newRule.value.pattern)
-      return true
-    } catch {
-      return false
-    }
-  }
-  return true
-})
+	if (!newRule.value.pattern) return true;
+	if (newRule.value.isRegex) {
+		try {
+			new RegExp(newRule.value.pattern);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+	return true;
+});
 
 const handleAddRule = () => {
-  if (newRule.value.pattern && isValidPattern.value) {
-    emit('add', { ...newRule.value })
-    newRule.value = { pattern: '', isRegex: false, reason: '' }
-  }
-}
+	if (newRule.value.pattern && isValidPattern.value) {
+		emit('add', { ...newRule.value });
+		newRule.value = { pattern: '', isRegex: false, reason: '' };
+	}
+};
 </script>
 
 <style scoped>

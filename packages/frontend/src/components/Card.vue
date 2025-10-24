@@ -14,9 +14,9 @@
 
 <script setup lang="ts">
 defineProps<{
-  title?: string
-  variant?: 'default' | 'success' | 'error' | 'warning'
-}>()
+	title?: string;
+	variant?: 'default' | 'success' | 'error' | 'warning';
+}>();
 </script>
 
 <style scoped>

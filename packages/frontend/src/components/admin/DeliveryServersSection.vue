@@ -9,33 +9,74 @@
           <div class="list-item-id">{{ extractDomain(actor.id) }}</div>
           <div class="list-item-text">{{ actor.inbox }}</div>
         </div>
+        <button
+          class="remove-button"
+          @click="handleRemove(actor.id)"
+          title="Remove this server"
+        >
+          Remove
+        </button>
       </div>
       <div v-if="actorTotal > actors.length" class="list-footer">
         <p>Showing {{ actors.length}} of {{ actorTotal }} servers</p>
       </div>
     </div>
+    <ConfirmationDialog
+      :isOpen="showConfirmDialog"
+      title="Remove Delivery Server"
+      :message="`Are you sure you want to remove ${extractDomain(actorToRemove || '')}? A Reject activity will be sent to this server.`"
+      @confirm="confirmRemove"
+      @cancel="cancelRemove"
+    />
   </Card>
 </template>
 
 <script setup lang="ts">
-import Card from '../Card.vue'
-import type { Actor } from '../../types/api'
+import { ref } from 'vue';
+import type { Actor } from '../../types/api';
+import Card from '../Card.vue';
+import ConfirmationDialog from '../ConfirmationDialog.vue';
 
 interface Props {
-  actors: Actor[]
-  actorTotal: number
+	actors: Actor[];
+	actorTotal: number;
 }
 
-defineProps<Props>()
+defineProps<Props>();
+
+const emit = defineEmits<{
+	removeActor: [actorId: string];
+}>();
+
+const showConfirmDialog = ref(false);
+const actorToRemove = ref<string | null>(null);
+
+const handleRemove = (actorId: string) => {
+	actorToRemove.value = actorId;
+	showConfirmDialog.value = true;
+};
+
+const confirmRemove = () => {
+	if (actorToRemove.value) {
+		emit('removeActor', actorToRemove.value);
+	}
+	showConfirmDialog.value = false;
+	actorToRemove.value = null;
+};
+
+const cancelRemove = () => {
+	showConfirmDialog.value = false;
+	actorToRemove.value = null;
+};
 
 const extractDomain = (url: string): string => {
-  try {
-    const urlObj = new URL(url)
-    return urlObj.hostname
-  } catch {
-    return url
-  }
-}
+	try {
+		const urlObj = new URL(url);
+		return urlObj.hostname;
+	} catch {
+		return url;
+	}
+};
 </script>
 
 <style scoped>
@@ -89,5 +130,20 @@ const extractDomain = (url: string): string => {
   font-size: 13px;
   border-top: 1px solid var(--border-color);
   margin-top: 8px;
+}
+
+.remove-button {
+  padding: 6px 12px;
+  font-size: 13px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-button:hover {
+  background-color: #c82333;
 }
 </style>

@@ -45,8 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import MainLayout from '../../layouts/MainLayout.vue'
-import Card from '../../components/Card.vue'
+import Card from '../../components/Card.vue';
+import MainLayout from '../../layouts/MainLayout.vue';
 </script>
 
 <style scoped>

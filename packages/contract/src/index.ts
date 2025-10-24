@@ -213,5 +213,20 @@ export const contract = {
 					total: z.number().int().min(0),
 				}),
 			),
+		remove: oc
+			.route({
+				method: 'DELETE',
+				path: '/actors/{id}',
+			})
+			.input(
+				z.object({
+					id: z.string().url(),
+				}),
+			)
+			.output(
+				z.object({
+					success: z.boolean(),
+				}),
+			),
 	},
 };

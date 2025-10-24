@@ -30,26 +30,26 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
-import Card from '../Card.vue'
-import type { FollowRequest } from '../../types/api'
+import { reactive } from 'vue';
+import type { FollowRequest } from '../../types/api';
+import Card from '../Card.vue';
 
 interface Props {
-  followRequests: FollowRequest[]
+	followRequests: FollowRequest[];
 }
 
 interface Emits {
-  (e: 'approve', id: string): void
-  (e: 'reject', id: string): void
+	(e: 'approve', id: string): void;
+	(e: 'reject', id: string): void;
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+defineProps<Props>();
+defineEmits<Emits>();
 
 const loadingActions = reactive({
-  approve: new Set<string>(),
-  reject: new Set<string>()
-})
+	approve: new Set<string>(),
+	reject: new Set<string>(),
+});
 </script>
 
 <style scoped>

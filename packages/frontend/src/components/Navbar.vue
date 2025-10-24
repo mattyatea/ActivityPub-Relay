@@ -21,17 +21,17 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '../composables/useTheme'
+import { useTheme } from '../composables/useTheme';
 
 interface Props {
-  currentPage?: 'home' | 'admin'
+	currentPage?: 'home' | 'admin';
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  currentPage: 'home'
-})
+	currentPage: 'home',
+});
 
-const { isDark, toggleTheme } = useTheme()
+const { isDark, toggleTheme } = useTheme();
 </script>
 
 <style scoped>
