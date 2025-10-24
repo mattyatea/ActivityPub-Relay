@@ -1,7 +1,7 @@
 name = "activitypub-relay"
 main = "src/server.ts"
-compatibility_date = "2025-10-25"
-compatibility_flags = [ ]
+compatibility_date = "2025-09-15"
+compatibility_flags = []
 
 # Static assets configuration
 # Using the new Workers Assets feature
@@ -12,11 +12,6 @@ binding = "ASSETS"
 [vars]
 HOSTNAME = "relay-test.mattyaski.co"
 
-# This is the D1 database binding.
-# You'll need to create a D1 database named "relay-db" in your Cloudflare account.
-# You can do this with the command: `pnpm wrangler d1 create relay-db`
-# Wrangler will then automatically link it.
-# The binding "DB" will be available in your Worker on `env.DB`.
 [[d1_databases]]
 binding = "DB"
 database_name = "relay"
@@ -24,16 +19,3 @@ database_id = "0c4a4930-3e25-465a-a322-775bb61eed84"
 
 [observability.logs]
 enabled = true
-
-# Development environment configuration
-[env.development]
-vars = { ENVIRONMENT = "development", HOSTNAME = "relay-test.mattyaski.co" }
-
-[[env.development.d1_databases]]
-binding = "DB"
-database_name = "relay"
-database_id = "0c4a4930-3e25-465a-a322-775bb61eed84"
-
-[env.development.dev]
-ip = "127.0.0.1"
-port = 3000
