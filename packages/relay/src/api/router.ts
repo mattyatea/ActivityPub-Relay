@@ -21,6 +21,7 @@ import {
 	updateSettingByKey as updateSettingByKeyService,
 	updateSettings as updateSettingsService,
 } from '@/service/SettingsService';
+import { createApiLogger, sanitizeError } from '@/utils/logger.ts';
 
 type Context = {
 	env: Bindings;
@@ -60,10 +61,14 @@ const updateSettings = os.settings.update.handler(
  */
 const getSettingByKey = os.settings.getByKey.handler(
 	async ({ input, context }) => {
+		const logger = createApiLogger('/settings/{key}', 'GET');
 		try {
 			return await getSettingByKeyService(input.key, context.env);
 		} catch (error) {
-			console.error('Failed to get setting by key:', error);
+			logger.error('Failed to get setting by key', {
+				key: input.key,
+				...sanitizeError(error),
+			});
 			throw error;
 		}
 	},
@@ -75,15 +80,24 @@ const getSettingByKey = os.settings.getByKey.handler(
  */
 const updateSettingByKey = os.settings.updateByKey.handler(
 	async ({ input, context }) => {
+		const logger = createApiLogger('/settings/{key}', 'PUT');
 		try {
 			const success = await updateSettingByKeyService(
 				input.key,
 				input.value,
 				context.env,
 			);
+			if (success) {
+				logger.info('Setting updated successfully', {
+					key: input.key,
+				});
+			}
 			return { success };
 		} catch (error) {
-			console.error('Failed to update setting by key:', error);
+			logger.error('Failed to update setting by key', {
+				key: input.key,
+				...sanitizeError(error),
+			});
 			return { success: false };
 		}
 	},
@@ -113,11 +127,18 @@ const listFollowRequests = os.followRequests.list.handler(
  */
 const approveFollowRequestHandler = os.followRequests.approve.handler(
 	async ({ input, context }) => {
+		const logger = createApiLogger('/follow-requests/{id}/approve', 'POST');
 		try {
 			const success = await approveFollowRequest(input.id, context.env);
+			if (success) {
+				logger.info('Follow request approved', { requestId: input.id });
+			}
 			return { success };
 		} catch (error) {
-			console.error('Failed to approve follow request:', error);
+			logger.error('Failed to approve follow request', {
+				requestId: input.id,
+				...sanitizeError(error),
+			});
 			return { success: false };
 		}
 	},
@@ -129,11 +150,18 @@ const approveFollowRequestHandler = os.followRequests.approve.handler(
  */
 const rejectFollowRequestHandler = os.followRequests.reject.handler(
 	async ({ input, context }) => {
+		const logger = createApiLogger('/follow-requests/{id}/reject', 'POST');
 		try {
 			const success = await rejectFollowRequest(input.id, context.env);
+			if (success) {
+				logger.info('Follow request rejected', { requestId: input.id });
+			}
 			return { success };
 		} catch (error) {
-			console.error('Failed to reject follow request:', error);
+			logger.error('Failed to reject follow request', {
+				requestId: input.id,
+				...sanitizeError(error),
+			});
 			return { success: false };
 		}
 	},
@@ -158,6 +186,7 @@ const listDomainRules = os.domainRules.list.handler(
  * ドメインルールを追加
  */
 const addDomainRule = os.domainRules.add.handler(async ({ input, context }) => {
+	const logger = createApiLogger('/domain-rules', 'POST');
 	try {
 		const id = await addDomainRuleService(
 			input.pattern,
@@ -166,12 +195,21 @@ const addDomainRule = os.domainRules.add.handler(async ({ input, context }) => {
 			context.env,
 		);
 
+		logger.info('Domain rule added', {
+			ruleId: id,
+			pattern: input.pattern,
+			isRegex: input.isRegex,
+		});
+
 		return {
 			id,
 			success: true,
 		};
 	} catch (error) {
-		console.error('Failed to add domain rule:', error);
+		logger.error('Failed to add domain rule', {
+			pattern: input.pattern,
+			...sanitizeError(error),
+		});
 		throw error;
 	}
 });
@@ -204,11 +242,18 @@ const listActors = os.actors.list.handler(async ({ input, context }) => {
  * フォロワー(配送サーバー)を削除
  */
 const removeActor = os.actors.remove.handler(async ({ input, context }) => {
+	const logger = createApiLogger('/actors/{id}', 'DELETE');
 	try {
 		const success = await removeActorService(input.id, context.env);
+		if (success) {
+			logger.info('Actor removed successfully', { actorId: input.id });
+		}
 		return { success };
 	} catch (error) {
-		console.error('Failed to remove actor:', error);
+		logger.error('Failed to remove actor', {
+			actorId: input.id,
+			...sanitizeError(error),
+		});
 		return { success: false };
 	}
 });

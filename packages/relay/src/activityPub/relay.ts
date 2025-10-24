@@ -4,6 +4,7 @@ import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
+import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
 /**
  * Create/Announce Activityをリレーする
@@ -37,7 +38,12 @@ export const relayActivity = async (
 	relayedCount: number;
 	failureCount: number;
 }> => {
+	const logger = createActivityLogger(activity.type, activity.actor);
+
 	if (!checkPublicCollection(activity)) {
+		logger.debug('Activity is not for public collection, skipping relay', {
+			activityId: activity.id,
+		});
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
@@ -53,6 +59,9 @@ export const relayActivity = async (
 		});
 
 		if (followers.length === 0) {
+			logger.info('No followers registered, skipping relay', {
+				activityId: activity.id,
+			});
 			return { success: false, relayedCount: 0, failureCount: 0 };
 		}
 
@@ -90,17 +99,31 @@ export const relayActivity = async (
 		const failures = deliveries.filter(
 			(result) => result.status === 'rejected',
 		);
+
+		const relayedCount = deliveries.length - failures.length;
+		const failureCount = failures.length;
+
 		if (failures.length > 0) {
-			console.warn(
-				`Failed to relay activity ${activity.id} to ${failures.length} follower(s)`,
-				failures,
-			);
+			logger.warn('Some deliveries failed during relay', {
+				activityId: activity.id,
+				totalRecipients: deliveries.length,
+				successCount: relayedCount,
+				failureCount,
+				failureReasons: failures.map((f) =>
+					f.status === 'rejected' ? sanitizeError(f.reason) : null
+				),
+			});
+		} else {
+			logger.info('Activity relayed successfully to all followers', {
+				activityId: activity.id,
+				recipientCount: relayedCount,
+			});
 		}
 
 		return {
 			success: true,
-			relayedCount: deliveries.length - failures.length,
-			failureCount: failures.length,
+			relayedCount,
+			failureCount,
 		};
 	} finally {
 		await prisma.$disconnect();

@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { createPrismaClient } from '@/lib/prisma.ts';
 import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
+import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
 /**
  * Undo Activityを処理する
@@ -25,9 +26,15 @@ export const undoActivity = async (
 		Bindings: Bindings;
 	}>,
 ): Promise<boolean> => {
+	const logger = createActivityLogger('Undo', activity.actor);
+
 	const followActivityId =
 		typeof activity.object !== 'string' ? activity.object?.id : activity.object;
 	if (!followActivityId || typeof followActivityId !== 'string') {
+		logger.warn('Invalid Undo activity: missing or invalid object', {
+			activityId: activity.id,
+			object: activity.object,
+		});
 		return false;
 	}
 
@@ -39,9 +46,17 @@ export const undoActivity = async (
 		await prisma.actor.delete({
 			where: { id: activity.actor },
 		});
+		logger.info('Successfully processed Undo activity', {
+			activityId: activity.id,
+			followActivityId,
+		});
 		return true;
 	} catch (error) {
-		console.error('Failed to undo activity:', error);
+		logger.error('Failed to undo activity', {
+			activityId: activity.id,
+			followActivityId,
+			...sanitizeError(error),
+		});
 		return false;
 	} finally {
 		await prisma.$disconnect();

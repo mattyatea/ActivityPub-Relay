@@ -6,6 +6,7 @@ import type {
 	ListFollowRequestsResponse,
 } from '@/types/api.ts';
 import { acceptFollow, rejectFollow } from '@/utils/activityPub.ts';
+import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
 
 /**
  * フォロー申請一覧を取得する
@@ -56,6 +57,7 @@ export async function approveFollowRequest(
 	followRequestId: string,
 	env: Bindings,
 ): Promise<boolean> {
+	const logger = createServiceLogger('FollowService');
 	const prisma = createPrismaClient(env.DB);
 	try {
 		// Follow申請を取得
@@ -64,21 +66,20 @@ export async function approveFollowRequest(
 		});
 
 		if (!followRequest) {
-			console.error('Follow request not found:', followRequestId);
+			logger.error('Follow request not found', { followRequestId });
 			return false;
 		}
 
 		if (!followRequest.activity_json) {
-			console.error(
-				'No activity JSON found for follow request:',
+			logger.error('No activity JSON found for follow request', {
 				followRequestId,
-			);
+			});
 			return false;
 		}
 
 		// アクター情報を取得
 		if (!followRequest.actor) {
-			console.error('No actor found for follow request:', followRequestId);
+			logger.error('No actor found for follow request', { followRequestId });
 			return false;
 		}
 
@@ -87,7 +88,10 @@ export async function approveFollowRequest(
 		try {
 			activity = JSON.parse(followRequest.activity_json);
 		} catch (error) {
-			console.error('Invalid activity JSON:', error);
+			logger.error('Invalid activity JSON', {
+				followRequestId,
+				...sanitizeError(error),
+			});
 			return false;
 		}
 
@@ -119,10 +123,16 @@ export async function approveFollowRequest(
 			where: { id: followRequestId },
 		});
 
-		console.log(`Follow request ${followRequestId} approved and Accept sent`);
+		logger.info('Follow request approved and Accept sent', {
+			followRequestId,
+			actorId: followRequest.actor,
+		});
 		return true;
 	} catch (error) {
-		console.error('Failed to approve follow request:', error);
+		logger.error('Failed to approve follow request', {
+			followRequestId,
+			...sanitizeError(error),
+		});
 		return false;
 	} finally {
 		await prisma.$disconnect();
@@ -140,6 +150,7 @@ export async function rejectFollowRequest(
 	followRequestId: string,
 	env: Bindings,
 ): Promise<boolean> {
+	const logger = createServiceLogger('FollowService');
 	const prisma = createPrismaClient(env.DB);
 	try {
 		const followRequest = await prisma.followRequest.findUnique({
@@ -147,20 +158,19 @@ export async function rejectFollowRequest(
 		});
 
 		if (!followRequest) {
-			console.error('Follow request not found:', followRequestId);
+			logger.error('Follow request not found', { followRequestId });
 			return false;
 		}
 
 		if (!followRequest.activity_json) {
-			console.error(
-				'No activity JSON found for follow request:',
+			logger.error('No activity JSON found for follow request', {
 				followRequestId,
-			);
+			});
 			return false;
 		}
 
 		if (!followRequest.actor) {
-			console.error('No actor found for follow request:', followRequestId);
+			logger.error('No actor found for follow request', { followRequestId });
 			return false;
 		}
 
@@ -169,7 +179,10 @@ export async function rejectFollowRequest(
 		try {
 			activity = JSON.parse(followRequest.activity_json);
 		} catch (error) {
-			console.error('Invalid activity JSON:', error);
+			logger.error('Invalid activity JSON', {
+				followRequestId,
+				...sanitizeError(error),
+			});
 			return false;
 		}
 
@@ -185,10 +198,16 @@ export async function rejectFollowRequest(
 			where: { id: followRequestId },
 		});
 
-		console.log(`Follow request ${followRequestId} rejected and Reject sent`);
+		logger.info('Follow request rejected and Reject sent', {
+			followRequestId,
+			actorId: followRequest.actor,
+		});
 		return true;
 	} catch (error) {
-		console.error('Failed to reject follow request:', error);
+		logger.error('Failed to reject follow request', {
+			followRequestId,
+			...sanitizeError(error),
+		});
 		return false;
 	} finally {
 		await prisma.$disconnect();

@@ -7,6 +7,7 @@ import { router } from '@/api/router.ts';
 import type { APRequest } from '@/types/activityPubTypes';
 import { fetchActor } from '@/utils/activityPub.ts';
 import { parseHeader, verifySignature } from '@/utils/httpSignature';
+import { logger, sanitizeError } from '@/utils/logger.ts';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -18,16 +19,22 @@ app.get('/assets/*', async (c) => {
 		}
 		return c.env.ASSETS.fetch(c.req.raw);
 	} catch (error) {
-		console.error('Error serving static asset:', error);
+		logger.error('Error serving static asset', {
+			path: c.req.path,
+			...sanitizeError(error),
+		});
 		return c.notFound();
 	}
 });
 
 app.use('*', async (c, next) => {
 	if (!c.env.HOSTNAME || !c.env.PUBLICKEY || !c.env.PRIVATEKEY || !c.env.DB) {
-		console.error(
-			'Missing environment variables. Make sure HOSTNAME, PUBLICKEY, PRIVATEKEY are set and the D1 database is bound in wrangler.toml.',
-		);
+		logger.error('Missing environment variables', {
+			hasHostname: !!c.env.HOSTNAME,
+			hasPublicKey: !!c.env.PUBLICKEY,
+			hasPrivateKey: !!c.env.PRIVATEKEY,
+			hasDB: !!c.env.DB,
+		});
 		return c.text('Internal Server Error: Missing configuration', 500);
 	}
 	await next();
@@ -54,7 +61,13 @@ app.use('/api/*', async (c, next) => {
 });
 
 app.use('/api/*', async (c, next) => {
-	console.log('API request:', c.req.method, c.req.url);
+	const requestLogger = logger.child({
+		component: 'api',
+		method: c.req.method,
+		path: c.req.path,
+	});
+
+	requestLogger.info('Incoming API request');
 
 	const { matched, response } = await handler.handle(c.req.raw, {
 		prefix: '/api',
@@ -63,24 +76,38 @@ app.use('/api/*', async (c, next) => {
 		},
 	});
 
-	console.log('Handler matched:', matched, 'Status:', response?.status);
-
 	if (matched) {
+		requestLogger.info('API request handled', {
+			matched: true,
+			statusCode: response?.status,
+		});
 		return c.newResponse(response.body, response);
 	}
 
-	console.log('No match found, passing to next middleware');
+	requestLogger.debug('No handler match, passing to next middleware');
 	await next();
 });
 
 // Inbox endpoint for receiving activities
 app.post('/inbox', async (c) => {
+	const inboxLogger = logger.child({ component: 'inbox' });
+
 	// Clone the request to safely read the body, as it can only be read once.
 	const reqClone = c.req.raw.clone();
 	const activity: APRequest = await reqClone.json();
 
+	inboxLogger.info('Received activity', {
+		activityType: activity.type,
+		activityId: activity.id,
+		actor: activity.actor,
+	});
+
 	// Pass the original request to verifySignature. Cloning is a precaution.
 	if (!(await verifySignature(c.req.raw))) {
+		inboxLogger.warn('Signature verification failed', {
+			activityType: activity.type,
+			actor: activity.actor,
+		});
 		return c.text('Unauthorized: Signature verification failed', 401);
 	}
 
@@ -124,6 +151,10 @@ app.post('/inbox', async (c) => {
 		);
 	}
 
+	inboxLogger.warn('Unhandled activity type', {
+		activityType: activity.type,
+		activityId: activity.id,
+	});
 	return c.text('Not Implemented: Activity type not handled', 501);
 });
 
@@ -215,7 +246,7 @@ app.get('/.well-known/host-meta', (c) => {
 app.get('/*', async (c) => {
 	try {
 		if (!c.env.ASSETS) {
-			console.error('ASSETS binding not found');
+			logger.error('ASSETS binding not found', { path: c.req.path });
 			return c.notFound();
 		}
 
@@ -242,7 +273,10 @@ app.get('/*', async (c) => {
 		// Fetch the requested asset directly
 		return c.env.ASSETS.fetch(c.req.raw);
 	} catch (error) {
-		console.error('Error serving static asset:', error);
+		logger.error('Error serving static asset', {
+			path: c.req.path,
+			...sanitizeError(error),
+		});
 		return c.notFound();
 	}
 });
