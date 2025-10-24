@@ -61,7 +61,7 @@
             ソースコード、ドキュメント、Issue報告はGitHubで公開しています。
           </p>
           <a
-            href="https://github.com/matyatea/ActivityPub-Relay"
+            href="https://github.com/mattyatea/ActivityPub-Relay"
             target="_blank"
             rel="noopener noreferrer"
             class="github-link"
