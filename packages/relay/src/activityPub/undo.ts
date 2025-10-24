@@ -1,6 +1,5 @@
 import type { Context } from 'hono';
 import { createPrismaClient } from '@/lib/prisma.ts';
-import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
@@ -23,7 +22,7 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 export const undoActivity = async (
 	activity: APActivity,
 	context: Context<{
-		Bindings: Bindings;
+		Bindings: Env;
 	}>,
 ): Promise<boolean> => {
 	const logger = createActivityLogger('Undo', activity.actor);

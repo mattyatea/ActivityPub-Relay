@@ -1,6 +1,5 @@
 import type { Context } from 'hono';
 import { createPrismaClient } from '@/lib/prisma.ts';
-import type { Bindings } from '@/server.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
 import {
 	acceptFollow,
@@ -34,7 +33,7 @@ export const followActivity = async (
 	activity: APActivity,
 	actor: APActor,
 	context: Context<{
-		Bindings: Bindings;
+		Bindings: Env;
 	}>,
 ): Promise<boolean> => {
 	const logger = createActivityLogger('Follow', activity.actor);

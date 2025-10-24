@@ -1,6 +1,5 @@
 import type { Context } from 'hono';
 import { createPrismaClient } from '@/lib/prisma.ts';
-import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
@@ -31,7 +30,7 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 export const relayActivity = async (
 	activity: APActivity,
 	context: Context<{
-		Bindings: Bindings;
+		Bindings: Env;
 	}>,
 ): Promise<{
 	success: boolean;

@@ -1,6 +1,5 @@
 import { contract } from '@activitypub-relay/contract';
 import { implement } from '@orpc/server';
-import type { Bindings } from '@/server.ts';
 import {
 	listActors as listActorsService,
 	removeActor as removeActorService,
@@ -24,7 +23,7 @@ import {
 import { createApiLogger, sanitizeError } from '@/utils/logger.ts';
 
 type Context = {
-	env: Bindings;
+	env: Env;
 };
 
 const os = implement(contract).$context<Context>();

@@ -1,5 +1,4 @@
 import { createHash, createSign, createVerify } from 'node:crypto';
-import type { Bindings } from '@/server.ts';
 import { fetchActor } from '@/utils/activityPub.ts';
 
 export function parseHeader(request: Request): { [key: string]: string } {
@@ -75,7 +74,7 @@ export async function verifySignature(req: Request) {
 	return verifier.verify(publicKey, signature, 'base64');
 }
 
-export function signHeaders(body: string, strInbox: string, env: Bindings) {
+export function signHeaders(body: string, strInbox: string, env: Env) {
 	let privateKeyPem = env.PRIVATEKEY;
 	privateKeyPem = privateKeyPem?.split('\\n').join('\n');
 	if (privateKeyPem?.startsWith('"')) privateKeyPem = privateKeyPem.slice(1);

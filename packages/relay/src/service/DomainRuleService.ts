@@ -1,5 +1,4 @@
 import { createPrismaClient } from '@/lib/prisma';
-import type { Bindings } from '@/server.ts';
 import type { DomainRule, ListDomainRulesResponse } from '@/types/api.ts';
 
 /**
@@ -13,7 +12,7 @@ import type { DomainRule, ListDomainRulesResponse } from '@/types/api.ts';
 export async function listDomainRules(
 	limit: number,
 	offset: number,
-	env: Bindings,
+	env: Env,
 ): Promise<ListDomainRulesResponse> {
 	const prisma = createPrismaClient(env.DB);
 	try {
@@ -54,7 +53,7 @@ export async function addDomainRule(
 	pattern: string,
 	isRegex: boolean,
 	reason: string | undefined,
-	env: Bindings,
+	env: Env,
 ): Promise<number> {
 	const prisma = createPrismaClient(env.DB);
 	try {
@@ -82,7 +81,7 @@ export async function addDomainRule(
  */
 export async function removeDomainRule(
 	id: number,
-	env: Bindings,
+	env: Env,
 ): Promise<boolean> {
 	const prisma = createPrismaClient(env.DB);
 	try {

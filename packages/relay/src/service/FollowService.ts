@@ -1,5 +1,4 @@
 import { createPrismaClient } from '@/lib/prisma.ts';
-import type { Bindings } from '@/server.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import type {
 	FollowRequestStatus,
@@ -19,7 +18,7 @@ import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
 export async function listFollowRequests(
 	limit: number,
 	offset: number,
-	env: Bindings,
+	env: Env,
 ): Promise<ListFollowRequestsResponse> {
 	const prisma = createPrismaClient(env.DB);
 	try {
@@ -55,7 +54,7 @@ export async function listFollowRequests(
  */
 export async function approveFollowRequest(
 	followRequestId: string,
-	env: Bindings,
+	env: Env,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
 	const prisma = createPrismaClient(env.DB);
@@ -148,7 +147,7 @@ export async function approveFollowRequest(
  */
 export async function rejectFollowRequest(
 	followRequestId: string,
-	env: Bindings,
+	env: Env,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
 	const prisma = createPrismaClient(env.DB);
