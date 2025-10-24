@@ -2,6 +2,11 @@ import { createHash, createSign, createVerify } from 'node:crypto';
 import type { APActor } from '@/types/activityPubTypes.ts';
 import { fetchActor } from '@/utils/activityPub.ts';
 
+export type SignatureVerificationResult = {
+	isValid: boolean;
+	actor: APActor;
+};
+
 export function parseHeader(request: Request): { [key: string]: string } {
 	const signatureHeader = request.headers.get('Signature');
 	if (!signatureHeader) {
@@ -50,7 +55,7 @@ export function parseHeader(request: Request): { [key: string]: string } {
 
 export async function verifySignature(
 	req: Request,
-): Promise<{ isValid: boolean; actor: APActor }> {
+): Promise<SignatureVerificationResult> {
 	const header = parseHeader(req);
 	const keyId = header.keyId;
 	const signature = header.signature;

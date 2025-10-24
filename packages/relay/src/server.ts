@@ -4,13 +4,20 @@ import { followActivity } from '@/activityPub/follow.ts';
 import { relayActivity } from '@/activityPub/relay.ts';
 import { undoActivity } from '@/activityPub/undo.ts';
 import { router } from '@/api/router.ts';
-import type { APActor, APRequest } from '@/types/activityPubTypes';
+import type { APRequest } from '@/types/activityPubTypes';
+import type { SignatureVerificationResult } from '@/utils/httpSignature';
 import { verifySignature } from '@/utils/httpSignature';
 import { logger, sanitizeError } from '@/utils/logger.ts';
 
 const app = new Hono<{ Bindings: Env }>();
 
-const relayActivityType = ['Create', 'Announce', 'Update', 'Delete', 'Remove'];
+const relayActivityTypes = new Set([
+	'Create',
+	'Announce',
+	'Update',
+	'Delete',
+	'Remove',
+]);
 
 // Static assets can be served without full environment check
 app.get('/assets/*', async (c) => {
@@ -93,37 +100,39 @@ app.use('/api/*', async (c, next) => {
 app.post('/inbox', async (c) => {
 	const inboxLogger = logger.child({ component: 'inbox' });
 
-	// Clone the request to safely read the body, as it can only be read once.
-	const reqClone = c.req.raw.clone();
-	const activity: APRequest = await reqClone.json();
+	let verificationResult: SignatureVerificationResult;
+	try {
+		verificationResult = await verifySignature(c.req.raw);
+	} catch (error) {
+		inboxLogger.warn('Signature verification threw error', {
+			...sanitizeError(error),
+		});
+		return c.text('Unauthorized: Signature verification failed', 401);
+	}
+
+	const { isValid, actor } = verificationResult;
+	if (!isValid) {
+		inboxLogger.warn('Signature verification failed', {
+			actor: actor.id,
+		});
+		return c.text('Unauthorized: Signature verification failed', 401);
+	}
+
+	let activity: APRequest;
+	try {
+		activity = (await c.req.json<APRequest>()) as APRequest;
+	} catch (error) {
+		inboxLogger.warn('Failed to parse activity payload', {
+			...sanitizeError(error),
+		});
+		return c.text('Bad Request: Invalid activity payload', 400);
+	}
 
 	inboxLogger.info('Received activity', {
 		activityType: activity.type,
 		activityId: activity.id,
 		actor: activity.actor,
 	});
-
-	let verificationResult: { isValid: boolean; actor: APActor } | null = null;
-	try {
-		verificationResult = await verifySignature(c.req.raw);
-	} catch (error) {
-		inboxLogger.warn('Signature verification threw error', {
-			activityType: activity.type,
-			actor: activity.actor,
-			...sanitizeError(error),
-		});
-		return c.text('Unauthorized: Signature verification failed', 401);
-	}
-
-	if (!verificationResult.isValid) {
-		inboxLogger.warn('Signature verification failed', {
-			activityType: activity.type,
-			actor: activity.actor,
-		});
-		return c.text('Unauthorized: Signature verification failed', 401);
-	}
-
-	const actor = verificationResult.actor;
 
 	if (activity.type === 'Follow') {
 		const followActivityResult = await followActivity(activity, actor, c);
@@ -143,7 +152,7 @@ app.post('/inbox', async (c) => {
 		}
 	}
 
-	if (relayActivityType.includes(activity.type)) {
+	if (relayActivityTypes.has(activity.type)) {
 		const relayResult = await relayActivity(activity, c);
 
 		if (!relayResult.success) {
@@ -155,10 +164,7 @@ app.post('/inbox', async (c) => {
 			}
 		}
 
-		return c.text(
-			`Accepted: Relayed to ${relayResult.relayedCount} follower(s)`,
-			202,
-		);
+		return c.text(`Accepted`, 202);
 	}
 
 	inboxLogger.warn('Unhandled activity type', {
