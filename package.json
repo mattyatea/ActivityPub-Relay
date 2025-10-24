@@ -1,32 +1,32 @@
 {
-	"name": "activitypub-relay",
+	"name": "activitypub-relay-monorepo",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler dev src/server.ts",
-		"deploy": "pnpm db:generate && pnpm db:migrate:prod && wrangler deploy --minify src/server.ts",
+		"dev": "concurrently \"pnpm --filter relay dev\" \"pnpm --filter frontend dev\"",
+		"dev:relay": "pnpm --filter relay dev",
+		"dev:frontend": "pnpm --filter frontend dev",
+		"build": "pnpm --filter frontend build",
+		"deploy": "pnpm build && pnpm --filter relay run deploy",
 		"check": "biome check",
 		"fix": "biome check --write",
 		"fix-unsafe": "biome check --write --unsafe",
-		"db:generate": "prisma generate",
-		"db:migrate": "wrangler d1 migrations apply relay --local",
-		"db:migrate:prod": "wrangler d1 migrations apply relay --remote"
-	},
-	"dependencies": {
-		"@orpc/contract": "^1.9.3",
-		"@orpc/openapi": "^1.9.3",
-		"@orpc/server": "^1.9.3",
-		"@prisma/adapter-d1": "^6.16.3",
-		"@prisma/client": "^6.16.3",
-		"hono": "^4.9.9",
-		"zod": "^4.1.11"
+		"db:generate": "pnpm --filter relay db:generate",
+		"db:migrate": "pnpm --filter relay db:migrate",
+		"db:migrate:prod": "pnpm --filter relay db:migrate:prod"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.5",
-		"@types/node": "^22.10.1",
-		"prisma": "^6.16.3",
-		"typescript": "^5.9.3",
-		"wrangler": "^4.42.0"
+		"concurrently": "^9.2.1",
+		"typescript": "^5.9.3"
+	},
+	"pnpm": {
+		"overrides": {
+			"@orpc/contract": "^1.9.3",
+			"zod": "^4.1.11",
+			"wrangler>zod": "^3.23.8",
+			"miniflare>zod": "^3.23.8"
+		}
 	},
 	"type": "module"
 }

@@ -8,18 +8,30 @@
 
 [Hono](https://hono.dev/)、TypeScript、Cloudflare Workersで構築されたシンプルなActivityPubリレーサーバーです。
 
+## 構成
+
+このプロジェクトはpnpm workspacesを使用したモノレポ構成になっています:
+
+- `packages/contract` - ORPC型定義と契約（フロントエンドとバックエンドで共有）
+- `packages/relay` - バックエンド（Cloudflare Workers）
+- `packages/frontend` - フロントエンド（Vue 3 + Vite）
+
 ## 前提条件
 
-- [Cloudflareアカウント](https://cloudflare.com/) 
+- [Cloudflareアカウント](https://cloudflare.com/)
+- Node.js 18以上
+- pnpm 9以上
 
 ## 機能
 
 - [x] 基本的な投稿リレー機能
 - [x] HTTP署名
 - [x] WebFingerおよびNodeInfoのサポート
+- [x] 管理用ダッシュボード（Vue 3）
+- [x] ドメインルール管理（ホワイトリスト/ブラックリスト）
+- [x] フォローリクエスト管理
 - [ ] Queue機能
 - [ ] レート制限機能
-- [ ] 管理用ダッシュボード
 
 ## セットアップ
 
@@ -47,7 +59,7 @@ openssl rsa -pubout -in private_key.pem -out public_key.pem
 
 #### ローカル開発環境
 
-`.dev.vars.example`をコピーして`.dev.vars`を作成し、実際の値を設定します:
+relayパッケージ内の`.dev.vars.example`をコピーして`.dev.vars`を作成し、実際の値を設定します:
 
 ```bash
 cp .dev.vars.example .dev.vars
@@ -114,48 +126,69 @@ npx wrangler d1 create activitypub-relay
 
 データベーススキーマを初期化します（必要に応じてマイグレーションの作成やSQLコマンドの実行を行ってください）。
 
-### 5. ローカル実行
+### 5. データベースマイグレーション
+
+Prismaスキーマを生成してマイグレーションを実行:
+
+```bash
+# スキーマ生成
+pnpm db:generate
+
+# ローカルマイグレーション
+pnpm db:migrate
+```
+
+### 6. ローカル実行
 
 開発サーバーを起動します:
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
-サーバーはホットリロードを有効にしてローカルで実行されます。
+これにより以下が起動します:
+- バックエンド: http://localhost:3000
+- フロントエンド: http://localhost:5173
 
-### 6. Cloudflare Workersへのデプロイ
+詳細な開発ガイドは [DEVELOPMENT.md](./development.md) を参照してください。
+
+### 7. Cloudflare Workersへのデプロイ
 
 リレーをCloudflare Workersにデプロイします:
 
 ```bash
-pnpm run deploy
+pnpm deploy
 ```
-
-## APIエンドポイント
-
-- `POST /inbox` - ActivityPubアクティビティを受信
-- `GET /actor` - アクター情報エンドポイント
-- `GET /.well-known/webfinger` - アクター検出用のWebFingerエンドポイント
-- `GET /.well-known/nodeinfo` - NodeInfo検出エンドポイント
-- `GET /nodeinfo/2.1.json` - NodeInfo 2.1メタデータ
-- `GET /.well-known/host-meta` - ホストメタデータエンドポイント
 
 ## 開発
 
-### コード品質
+詳細な開発ガイドは [development.md](./development.md) を参照してください。
 
-プロジェクトではBiomeをリントとフォーマットに使用しています:
+### 利用可能なコマンド
 
 ```bash
-# コードをチェック
-pnpm run check
+# 全体開発サーバー起動
+pnpm dev
 
-# 問題を自動修正
-pnpm run fix
+# 個別起動
+pnpm dev:relay      # バックエンドのみ
+pnpm dev:frontend   # フロントエンドのみ
 
-# unsafe fixを含めて修正
-pnpm run fix-unsafe
+# ビルド
+pnpm build
+
+# デプロイ
+pnpm deploy
+
+# DB操作
+pnpm db:generate      # Prismaスキーマ生成
+pnpm db:migrate       # ローカルマイグレーション
+pnpm db:migrate:prod  # 本番マイグレーション
+
+# コード品質
+pnpm check       # Biomeチェック
+pnpm fix         # 自動修正
+pnpm fix-unsafe  # unsafe fixを含めて修正
 ```
 
 ## ライセンス
@@ -168,18 +201,30 @@ pnpm run fix-unsafe
 
 A simple ActivityPub relay server built with [Hono](https://hono.dev/), TypeScript, and Cloudflare Workers.
 
+### Architecture
+
+This project uses pnpm workspaces monorepo structure:
+
+- `packages/contract` - ORPC type definitions and contracts (shared between frontend and backend)
+- `packages/relay` - Backend (Cloudflare Workers)
+- `packages/frontend` - Frontend (Vue 3 + Vite)
+
 ### Prerequisites
 
-- [Cloudflare account](https://cloudflare.com/) - For deploying to Workers
+- [Cloudflare account](https://cloudflare.com/)
+- Node.js 18+
+- pnpm 9+
 
 ### Features
 
 - [x] Basic post relay functionality
 - [x] HTTP Signatures
 - [x] WebFinger and NodeInfo support
+- [x] Admin dashboard (Vue 3)
+- [x] Domain rule management (whitelist/blacklist)
+- [x] Follow request management
 - [ ] Queue functionality
 - [ ] Rate limiting
-- [ ] Admin dashboard
 
 ### Getting Started
 

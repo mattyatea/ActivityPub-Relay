@@ -1,0 +1,31 @@
+{
+	"name": "@activitypub-relay/relay",
+	"version": "0.0.1",
+	"type": "module",
+	"main": "src/server.ts",
+	"scripts": {
+		"dev": "wrangler dev src/server.ts -e development",
+		"deploy": "pnpm db:generate && wrangler types && wrangler deploy --minify src/server.ts",
+		"db:generate": "prisma generate",
+		"db:migrate": "wrangler d1 migrations apply relay --local",
+		"db:migrate:prod": "wrangler d1 migrations apply relay --remote"
+	},
+	"imports": {
+		"@/*": "./src/*"
+	},
+	"dependencies": {
+		"@activitypub-relay/contract": "workspace:*",
+		"@orpc/openapi": "^1.9.3",
+		"@orpc/server": "^1.9.3",
+		"@prisma/adapter-d1": "^6.16.3",
+		"@prisma/client": "^6.16.3",
+		"hono": "^4.9.9",
+		"zod": "managed"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.1",
+		"prisma": "^6.16.3",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.42.0"
+	}
+}

@@ -8,16 +8,20 @@ import type { APRequest } from '@/types/activityPubTypes';
 import { fetchActor } from '@/utils/activityPub.ts';
 import { parseHeader, verifySignature } from '@/utils/httpSignature';
 
-export type Bindings = {
-	DB: D1Database;
-	HOSTNAME: string;
-	PUBLICKEY: string;
-	PRIVATEKEY: string;
-	API_KEY?: string;
-	ASSETS: Fetcher;
-};
+const app = new Hono<{ Bindings: Env }>();
 
-const app = new Hono<{ Bindings: Bindings }>();
+// Static assets can be served without full environment check
+app.get('/assets/*', async (c) => {
+	try {
+		if (!c.env.ASSETS) {
+			return c.notFound();
+		}
+		return c.env.ASSETS.fetch(c.req.raw);
+	} catch (error) {
+		console.error('Error serving static asset:', error);
+		return c.notFound();
+	}
+});
 
 app.use('*', async (c, next) => {
 	if (!c.env.HOSTNAME || !c.env.PUBLICKEY || !c.env.PRIVATEKEY || !c.env.DB) {
@@ -50,6 +54,8 @@ app.use('/api/*', async (c, next) => {
 });
 
 app.use('/api/*', async (c, next) => {
+	console.log('API request:', c.req.method, c.req.url);
+
 	const { matched, response } = await handler.handle(c.req.raw, {
 		prefix: '/api',
 		context: {
@@ -57,10 +63,13 @@ app.use('/api/*', async (c, next) => {
 		},
 	});
 
+	console.log('Handler matched:', matched, 'Status:', response?.status);
+
 	if (matched) {
 		return c.newResponse(response.body, response);
 	}
 
+	console.log('No match found, passing to next middleware');
 	await next();
 });
 
@@ -204,7 +213,38 @@ app.get('/.well-known/host-meta', (c) => {
 
 // Serve static assets from public directory
 app.get('/*', async (c) => {
-	return c.env.ASSETS.fetch(c.req.raw);
+	try {
+		if (!c.env.ASSETS) {
+			console.error('ASSETS binding not found');
+			return c.notFound();
+		}
+
+		const url = new URL(c.req.url);
+		let pathname = url.pathname;
+
+		// Handle directory requests by appending index.html
+		// e.g., /admin or /admin/ -> /admin/index.html
+		if (pathname.endsWith('/') || !pathname.includes('.')) {
+			// If path ends with / or has no extension, try to serve index.html
+			if (!pathname.endsWith('/')) {
+				pathname += '/';
+			}
+			pathname += 'index.html';
+
+			// Create a new request with the modified path
+			const modifiedUrl = new URL(url);
+			modifiedUrl.pathname = pathname;
+			const modifiedRequest = new Request(modifiedUrl.toString(), c.req.raw);
+
+			return c.env.ASSETS.fetch(modifiedRequest);
+		}
+
+		// Fetch the requested asset directly
+		return c.env.ASSETS.fetch(c.req.raw);
+	} catch (error) {
+		console.error('Error serving static asset:', error);
+		return c.notFound();
+	}
 });
 
 export default app;

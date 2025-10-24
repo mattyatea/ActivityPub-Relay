@@ -1,5 +1,5 @@
 import { implement } from '@orpc/server';
-import { contract } from './contract';
+import { contract } from '@activitypub-relay/contract';
 import type { Bindings } from '@/server.ts';
 import {
 	approveFollowRequest,
