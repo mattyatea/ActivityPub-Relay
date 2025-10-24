@@ -2,6 +2,15 @@ import type { APActor, APRequest } from '@/types/activityPubTypes.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 
 const PUBLIC_COLLECTION = 'https://www.w3.org/ns/activitystreams#Public';
+const ACTOR_CACHE_TTL_MS = 5 * 60 * 1000;
+const ACTOR_CACHE_MAX_SIZE = 128;
+
+type CachedActor = {
+	actor: APActor;
+	expiresAt: number;
+};
+
+const actorCache = new Map<string, CachedActor>();
 
 export const idGenerator = () => {
 	return Date.now().toString();
@@ -88,6 +97,16 @@ export async function sendActivity(
 
 export async function fetchActor(keyId: string): Promise<APActor> {
 	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
+	const now = Date.now();
+
+	const cached = actorCache.get(actorUrl);
+	if (cached && cached.expiresAt > now) {
+		// Refresh LRU order
+		actorCache.delete(actorUrl);
+		actorCache.set(actorUrl, cached);
+		return cached.actor;
+	}
+
 	const response = await fetch(actorUrl, {
 		method: 'GET',
 		headers: {
@@ -99,17 +118,21 @@ export async function fetchActor(keyId: string): Promise<APActor> {
 		throw new Error(`Failed to fetch actor: ${response.status}`);
 	}
 
-	const reader = response.body?.getReader();
-	const decoder = new TextDecoder('utf-8');
-	let result = '';
-	if (reader) {
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			result += decoder.decode(value, { stream: true });
+	const actor = (await response.json()) as APActor;
+
+	if (actorCache.size >= ACTOR_CACHE_MAX_SIZE) {
+		const oldestKey = actorCache.keys().next().value;
+		if (oldestKey) {
+			actorCache.delete(oldestKey);
 		}
 	}
-	return JSON.parse(result);
+
+	actorCache.set(actorUrl, {
+		actor,
+		expiresAt: now + ACTOR_CACHE_TTL_MS,
+	});
+
+	return actor;
 }
 
 export async function acceptFollow(

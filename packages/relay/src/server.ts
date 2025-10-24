@@ -5,8 +5,7 @@ import { relayActivity } from '@/activityPub/relay.ts';
 import { undoActivity } from '@/activityPub/undo.ts';
 import { router } from '@/api/router.ts';
 import type { APRequest } from '@/types/activityPubTypes';
-import { fetchActor } from '@/utils/activityPub.ts';
-import { parseHeader, verifySignature } from '@/utils/httpSignature';
+import { verifySignature } from '@/utils/httpSignature';
 import { logger, sanitizeError } from '@/utils/logger.ts';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -104,8 +103,19 @@ app.post('/inbox', async (c) => {
 		actor: activity.actor,
 	});
 
-	// Pass the original request to verifySignature. Cloning is a precaution.
-	if (!(await verifySignature(c.req.raw))) {
+	let verificationResult;
+	try {
+		verificationResult = await verifySignature(c.req.raw);
+	} catch (error) {
+		inboxLogger.warn('Signature verification threw error', {
+			activityType: activity.type,
+			actor: activity.actor,
+			...sanitizeError(error),
+		});
+		return c.text('Unauthorized: Signature verification failed', 401);
+	}
+
+	if (!verificationResult.isValid) {
 		inboxLogger.warn('Signature verification failed', {
 			activityType: activity.type,
 			actor: activity.actor,
@@ -113,9 +123,7 @@ app.post('/inbox', async (c) => {
 		return c.text('Unauthorized: Signature verification failed', 401);
 	}
 
-	const header = parseHeader(c.req.raw);
-	const keyId = header.keyId;
-	const actor = await fetchActor(keyId);
+	const actor = verificationResult.actor;
 
 	if (activity.type === 'Follow') {
 		const followActivityResult = await followActivity(activity, actor, c);

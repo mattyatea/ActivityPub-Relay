@@ -83,14 +83,13 @@ export const relayActivity = async (
 			return { success: false, relayedCount: 0, failureCount: 0 };
 		}
 
+		// Stringify activity once and reuse for all deliveries
+		const activityJson = JSON.stringify(activity);
+
 		const deliveries = await Promise.allSettled(
 			recipients.map(async (follower) => {
 				const inbox = follower.sharedInbox ?? follower.inbox;
-				const headers = signHeaders(
-					JSON.stringify(activity),
-					inbox,
-					context.env,
-				);
+				const headers = signHeaders(activityJson, inbox, context.env);
 				await sendActivity(inbox, activity, headers);
 			}),
 		);
