@@ -1,18 +1,18 @@
 <template>
   <nav class="navbar">
     <div class="nav-container">
-      <router-link to="/" class="nav-brand">
+      <a href="/" class="nav-brand">
         ActivityPub Relay
-      </router-link>
+      </a>
 
       <div class="nav-links">
-        <router-link to="/" class="nav-link" :class="{ active: route.path === '/' }">
+        <a href="/" class="nav-link" :class="{ active: currentPage === 'home' }">
           Home
-        </router-link>
-        <router-link to="/admin" class="nav-link" :class="{ active: route.path === '/admin' }">
+        </a>
+        <a href="/admin" class="nav-link" :class="{ active: currentPage === 'admin' }">
           Admin
-        </router-link>
-        <button class="theme-toggle" @click="toggleTheme">
+        </a>
+        <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
           {{ isDark ? '☀' : '☾' }}
         </button>
       </div>
@@ -21,29 +21,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useTheme } from '../composables/useTheme'
 
-const route = useRoute()
-const isDark = ref(false)
+interface Props {
+  currentPage?: 'home' | 'admin'
+}
 
-onMounted(() => {
-  const saved = localStorage.getItem('theme')
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  isDark.value = saved ? saved === 'dark' : prefersDark
-  applyTheme()
+const props = withDefaults(defineProps<Props>(), {
+  currentPage: 'home'
 })
 
-const toggleTheme = () => {
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  applyTheme()
-}
-
-const applyTheme = () => {
-  document.body.classList.remove('light-mode', 'dark-mode')
-  document.body.classList.add(isDark.value ? 'dark-mode' : 'light-mode')
-}
+const { isDark, toggleTheme } = useTheme()
 </script>
 
 <style scoped>

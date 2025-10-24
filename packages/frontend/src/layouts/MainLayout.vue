@@ -1,16 +1,22 @@
 <template>
   <div class="app">
-    <Navbar />
+    <Navbar :currentPage="currentPage" />
     <main class="container">
-      <router-view />
+      <slot />
     </main>
-    <Footer />
   </div>
 </template>
 
 <script setup lang="ts">
-import Footer from './components/Footer.vue';
-import Navbar from './components/Navbar.vue';
+import Navbar from '../components/Navbar.vue';
+
+interface Props {
+	currentPage?: 'home' | 'admin';
+}
+
+withDefaults(defineProps<Props>(), {
+	currentPage: 'home',
+});
 </script>
 
 <style scoped>

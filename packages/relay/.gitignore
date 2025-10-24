@@ -1,4 +1,4 @@
 public/assets
 public/index.html
-public/admin/*
+public/admin
 .dev.vars

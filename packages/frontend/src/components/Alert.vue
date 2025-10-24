@@ -9,21 +9,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const props = withDefaults(
   defineProps<{
     message: string
     type?: 'success' | 'error' | 'warning' | 'info'
     closeable?: boolean
+    autoDismiss?: boolean
+    dismissDuration?: number
   }>(),
   {
     type: 'info',
     closeable: true,
+    autoDismiss: true,
+    dismissDuration: 5000,
   }
 )
 
 const visible = ref(true)
+let dismissTimer: ReturnType<typeof setTimeout> | null = null
 
 const icon = computed(() => {
   const icons: Record<string, string> = {
@@ -37,7 +42,18 @@ const icon = computed(() => {
 
 const close = () => {
   visible.value = false
+  if (dismissTimer) {
+    clearTimeout(dismissTimer)
+  }
 }
+
+onMounted(() => {
+  if (props.autoDismiss) {
+    dismissTimer = setTimeout(() => {
+      visible.value = false
+    }, props.dismissDuration)
+  }
+})
 </script>
 
 <style scoped>

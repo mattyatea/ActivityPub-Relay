@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ActivityPub Relay - Connect your ActivityPub instance to the federated network" />
+    <title>ActivityPub Relay</title>
+    <script>
+      // Prevent FOUC (Flash of Unstyled Content) by applying theme before page renders
+      (function() {
+        const saved = localStorage.getItem('theme')
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        const isDark = saved ? saved === 'dark' : prefersDark
+        document.documentElement.classList.add(isDark ? 'dark-mode' : 'light-mode')
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/pages/index/main.ts"></script>
+  </body>
+</html>

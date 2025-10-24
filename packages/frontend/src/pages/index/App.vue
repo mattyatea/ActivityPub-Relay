@@ -1,5 +1,6 @@
 <template>
-  <div class="home">
+  <MainLayout currentPage="home">
+    <div class="home">
     <section class="hero">
       <h1>ActivityPub Relay</h1>
       <p>Connect your ActivityPub instance to the federated network</p>
@@ -39,11 +40,13 @@
         </ol>
       </Card>
     </section>
-  </div>
+    </div>
+  </MainLayout>
 </template>
 
 <script setup lang="ts">
-import Card from '../components/Card.vue';
+import MainLayout from '../../layouts/MainLayout.vue'
+import Card from '../../components/Card.vue'
 </script>
 
 <style scoped>
