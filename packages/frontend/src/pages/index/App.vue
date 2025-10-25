@@ -15,10 +15,10 @@
               <button
                 type="button"
                 class="copy-button"
-                @click="copyToClipboard(actorUrl)"
-                :class="{ copied: copiedUrl === 'actor' }"
+                @click="copyToClipboard(inboxUrl)"
+                :class="{ copied: copiedUrl === 'inbox' }"
               >
-                {{ copiedUrl === 'actor' ? 'コピー済み!' : 'コピー' }}
+                {{ copiedUrl === 'inbox' ? 'コピー済み!' : 'コピー' }}
               </button>
             </div>
             <p class="relay-url-note">
@@ -34,10 +34,10 @@
               <button
                 type="button"
                 class="copy-button"
-                @click="copyToClipboard(inboxUrl)"
-                :class="{ copied: copiedUrl === 'inbox' }"
+                @click="copyToClipboard(actorUrl)"
+                :class="{ copied: copiedUrl === 'actor' }"
               >
-                {{ copiedUrl === 'inbox' ? 'コピー済み!' : 'コピー' }}
+                {{ copiedUrl === 'actor' ? 'コピー済み!' : 'コピー' }}
               </button>
             </div>
             <p class="relay-url-note">
