@@ -10,17 +10,17 @@ directory = "public"
 binding = "ASSETS"
 
 [vars]
-HOSTNAME = "relay-test.mattyaski.co"
+HOSTNAME = "your-domain-here"
 IS_QUEUEING = "true"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "ap-relay"
-database_id = "2ae467fe-e7ec-4df6-90c6-b82f6343e00e"
+database_name = "relay"
+database_id = "0c4a4930-3e25-465a-a322-775bb61eed84"
+
+[[queues.producers]]
+queue = "QUEUES"
+binding = "MY_QUEUE"
 
 [observability.logs]
 enabled = true
-
-[[queues.producers]]
-queue = "ap-relay-queue"
-binding = "MY_QUEUE"

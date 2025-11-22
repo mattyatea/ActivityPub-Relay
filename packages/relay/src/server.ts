@@ -1,13 +1,14 @@
 import { OpenAPIHandler } from '@orpc/openapi/fetch';
 import { Hono } from 'hono';
 import { followActivity } from '@/activityPub/follow.ts';
-import { relayActivity } from '@/activityPub/relay.ts';
+import { relayActivity, relayActivitys } from '@/activityPub/relay.ts';
 import { undoActivity } from '@/activityPub/undo.ts';
 import { router } from '@/api/router.ts';
 import type { APRequest } from '@/types/activityPubTypes';
 import type { SignatureVerificationResult } from '@/utils/httpSignature';
 import { verifySignature } from '@/utils/httpSignature';
-import { logger, sanitizeError } from '@/utils/logger.ts';
+import { createQueueLogger, logger, sanitizeError } from '@/utils/logger.ts';
+import type { QueueData } from '@/utils/Queue.ts';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -19,7 +20,7 @@ const relayActivityTypes = new Set([
 	'Remove',
 	'Add',
 	'Like',
-    'Undo'
+	'Undo',
 ]);
 
 // Static assets can be served without full environment check
@@ -136,42 +137,33 @@ app.post('/inbox', async (c) => {
 		activityId: activity.id,
 		actor: activity.actor,
 	});
-    
+
 	if (activity.type === 'Follow') {
-		const followActivityResult = await followActivity(activity, actor, c);
+		const followActivityResult = await followActivity(activity, actor, c.env);
 		if (followActivityResult) {
-			return c.text('Accepted', 202);
+			return c.text('ok!', 202);
 		} else {
-			return c.text('Bad Request: Follow handling failed', 400);
+			return c.text(`failed`, 400);
 		}
 	}
 
 	if (activity.type === 'Undo') {
-		const undoActivityResult = await undoActivity(activity, c);
+		const undoActivityResult = await undoActivity(activity, c.env);
 		if (undoActivityResult) {
-			return c.text('OK', 200);
+			return c.text('ok!', 202);
 		}
 	}
 
 	if (relayActivityTypes.has(activity.type)) {
-		const relayResult = await relayActivity(activity, c);
-
-		if (!relayResult.success) {
-			if (relayResult.relayedCount === 0 && relayResult.failureCount === 0) {
-				return c.text(
-					'Accepted: Activity is not public or no followers registered',
-					202,
-				);
-			}
-		}
-
-		return c.text(`Accepted`, 202);
+		await relayActivitys(activity, c.env);
+		return c.text('ok!', 202);
 	}
 
 	inboxLogger.warn('Unhandled activity type', {
 		activityType: activity.type,
 		activityId: activity.id,
 	});
+
 	return c.text('Not Implemented: Activity type not handled', 501);
 });
 
@@ -298,4 +290,30 @@ app.get('/*', async (c) => {
 	}
 });
 
-export default app;
+export default {
+	fetch: app.fetch,
+	queue: async (batch: MessageBatch<QueueData>, env: Env) => {
+		const queueLogger = createQueueLogger();
+		const messages = batch.messages;
+		for (const message of messages) {
+			const body = message.body;
+			try {
+				await relayActivity(body.inbox, body.activity, body.activityJson, env);
+
+				message.ack();
+			} catch (e) {
+				if (e instanceof Error) {
+					queueLogger.error('Error', {
+						message: e.message,
+					});
+				} else {
+					queueLogger.error('Unknown Error', {
+						message: String(e),
+					});
+				}
+
+				message.retry();
+			}
+		}
+	},
+};

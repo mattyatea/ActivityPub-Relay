@@ -1,9 +1,9 @@
-import type { Context } from 'hono';
-import { createPrismaClient } from '@/lib/prisma.ts';
-import type { APActivity } from '@/types/activityPubTypes.ts';
-import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
-import { signHeaders } from '@/utils/httpSignature.ts';
-import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
+import type {Context} from 'hono';
+import {createPrismaClient} from '@/lib/prisma.ts';
+import type {APActivity} from '@/types/activityPubTypes.ts';
+import {checkPublicCollection, sendActivity} from '@/utils/activityPub.ts';
+import {signHeaders} from '@/utils/httpSignature.ts';
+import {createActivityLogger, sanitizeError} from '@/utils/logger.ts';
 
 /**
  * Create/Announce Activityをリレーする
@@ -13,7 +13,7 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
  * 送信元と同じホストのフォロワーには配信しません。
  *
  * @param activity - 受信したCreate/Announce Activity
- * @param context - Honoのコンテキスト（環境変数とD1データベースへのアクセスを含む）
+ * @param env - Honoのコンテキスト（環境変数とD1データベースへのアクセスを含む）
  * @returns {Promise<{success: boolean; relayedCount: number; failureCount: number}>}
  *   - success: リレー処理が成功したかどうか
  *   - relayedCount: 正常に配信できたフォロワー数
@@ -27,103 +27,127 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
  * - 配信は並列処理されます（Promise.allSettled使用）
  * - 配信失敗は警告ログに記録されます
  */
-export const relayActivity = async (
-	activity: APActivity,
-	context: Context<{
-		Bindings: Env;
-	}>,
+export const relayActivitys = async (
+    activity: APActivity,
+    env: Env,
 ): Promise<{
-	success: boolean;
-	relayedCount: number;
-	failureCount: number;
+    success: boolean;
+    relayedCount: number;
+    failureCount: number;
 }> => {
-	const logger = createActivityLogger(activity.type, activity.actor);
+    const logger = createActivityLogger(activity.type, activity.actor);
 
-	if (!checkPublicCollection(activity)) {
-		logger.debug('Activity is not for public collection, skipping relay', {
-			activityId: activity.id,
-		});
-		return { success: false, relayedCount: 0, failureCount: 0 };
-	}
+    if (!checkPublicCollection(activity)) {
+        logger.debug('Activity is not for public collection, skipping relay', {
+            activityId: activity.id,
+        });
+        return {success: false, relayedCount: 0, failureCount: 0};
+    }
 
-	const prisma = createPrismaClient(context.env.DB);
-	try {
-		// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
-		const followers = await prisma.actor.findMany({
-			select: {
-				id: true,
-				inbox: true,
-				sharedInbox: true,
-			},
-		});
+    const prisma = createPrismaClient(env.DB);
+    try {
+        // 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
+        const followers = await prisma.actor.findMany({
+            select: {
+                id: true,
+                inbox: true,
+                sharedInbox: true,
+            },
+        });
 
-		if (followers.length === 0) {
-			logger.info('No followers registered, skipping relay', {
-				activityId: activity.id,
-			});
-			return { success: false, relayedCount: 0, failureCount: 0 };
-		}
+        if (followers.length === 0) {
+            logger.info('No followers registered, skipping relay', {
+                activityId: activity.id,
+            });
+            return {success: false, relayedCount: 0, failureCount: 0};
+        }
 
-		const safeHostname = (value: string) => {
-			try {
-				return new URL(value).hostname;
-			} catch {
-				return null;
-			}
-		};
+        const safeHostname = (value: string) => {
+            try {
+                return new URL(value).hostname;
+            } catch {
+                return null;
+            }
+        };
 
-		const originHost = safeHostname(activity.actor);
-		const recipients = followers.filter((follower) => {
-			if (!originHost) return true;
-			const followerHost = safeHostname(follower.id);
-			return followerHost !== originHost;
-		});
+        const originHost = safeHostname(activity.actor);
+        const recipients = followers.filter((follower) => {
+            if (!originHost) return true;
+            const followerHost = safeHostname(follower.id);
+            return followerHost !== originHost;
+        });
 
-		if (recipients.length === 0) {
-			return { success: false, relayedCount: 0, failureCount: 0 };
-		}
+        if (recipients.length === 0) {
+            return {success: false, relayedCount: 0, failureCount: 0};
+        }
 
-		// Stringify activity once and reuse for all deliveries
-		const activityJson = JSON.stringify(activity);
+        // Stringify activity once and reuse for all deliveries
+        const activityJson = JSON.stringify(activity);
 
-		const deliveries = await Promise.allSettled(
-			recipients.map(async (follower) => {
-				const inbox = follower.sharedInbox ?? follower.inbox;
-				const headers = signHeaders(activityJson, inbox, context.env);
-				await sendActivity(inbox, activity, headers);
-			}),
-		);
+        const deliveries = await Promise.allSettled(
+            recipients.map(async (follower) => {
+                const inbox = follower.sharedInbox ?? follower.inbox;
+                if (env.IS_QUEUEING) {
+                    const inbox = follower.sharedInbox ?? follower.inbox;
 
-		const failures = deliveries.filter(
-			(result) => result.status === 'rejected',
-		);
+                    await env.MY_QUEUE.send({
+                        inbox,
+                        activity,
+                        activityJson,
+                    });
+                    return;
+                } else {
+                    await relayActivity({
+                        inbox,
+                        activity,
+                        activityJson,
+                        env,
+                    });
+                }
+            }),
+        );
 
-		const relayedCount = deliveries.length - failures.length;
-		const failureCount = failures.length;
+        const failures = deliveries.filter(
+            (result) => result.status === 'rejected',
+        );
 
-		if (failures.length > 0) {
-			logger.warn('Some deliveries failed during relay', {
-				activityId: activity.id,
-				totalRecipients: deliveries.length,
-				successCount: relayedCount,
-				failureCount,
-				failureReasons: failures.map((f) =>
-					f.status === 'rejected' ? sanitizeError(f.reason) : null
-				),
-			});
-		} else {
-			logger.info('Activity relayed successfully to all followers', {
-				activityId: activity.id,
-				recipientCount: relayedCount,
-			});
-		}
+        const relayedCount = deliveries.length - failures.length;
+        const failureCount = failures.length;
 
-		return {
-			success: true,
-			relayedCount,
-			failureCount,
-		};
-	} finally {
-		await prisma.$disconnect();
-	}
+        if (failures.length > 0) {
+            logger.warn('Some deliveries failed during relay', {
+                activityId: activity.id,
+                totalRecipients: deliveries.length,
+                successCount: relayedCount,
+                failureCount,
+                failureReasons: failures.map((f) =>
+                    f.status === 'rejected' ? sanitizeError(f.reason) : null,
+                ),
+            });
+        } else {
+            logger.info('Activity relayed successfully to all followers', {
+                activityId: activity.id,
+                recipientCount: relayedCount,
+            });
+        }
+
+        return {
+            success: true,
+            relayedCount,
+            failureCount,
+        };
+    } finally {
+        await prisma.$disconnect();
+    }
 };
+
+export async function relayActivity(
+    inbox: string,
+    activity: APActivity,
+    activityJson: string,
+    env: Env,
+) {
+    const headers = signHeaders(activityJson, inbox, env);
+
+    await sendActivity(inbox, activity, headers);
+}

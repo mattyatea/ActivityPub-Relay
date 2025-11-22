@@ -130,7 +130,10 @@ export function sanitizeError(error: unknown): LogContext {
 /**
  * Helper to create activity-specific logger
  */
-export function createActivityLogger(activityType: string, actorId?: string): Logger {
+export function createActivityLogger(
+	activityType: string,
+	actorId?: string,
+): Logger {
 	return new Logger({
 		component: 'activitypub',
 		activityType,
@@ -156,5 +159,11 @@ export function createServiceLogger(service: string): Logger {
 	return new Logger({
 		component: 'service',
 		service,
+	});
+}
+
+export function createQueueLogger(): Logger {
+	return new Logger({
+		component: 'queue',
 	});
 }
