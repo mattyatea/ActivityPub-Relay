@@ -19,6 +19,7 @@ const relayActivityTypes = new Set([
 	'Remove',
 	'Add',
 	'Like',
+    'Undo'
 ]);
 
 // Static assets can be served without full environment check
@@ -135,7 +136,7 @@ app.post('/inbox', async (c) => {
 		activityId: activity.id,
 		actor: activity.actor,
 	});
-
+    
 	if (activity.type === 'Follow') {
 		const followActivityResult = await followActivity(activity, actor, c);
 		if (followActivityResult) {
@@ -149,8 +150,6 @@ app.post('/inbox', async (c) => {
 		const undoActivityResult = await undoActivity(activity, c);
 		if (undoActivityResult) {
 			return c.text('OK', 200);
-		} else {
-			return c.text('Bad Request: Undo handling failed', 400);
 		}
 	}
 

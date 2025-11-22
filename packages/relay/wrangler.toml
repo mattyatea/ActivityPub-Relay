@@ -1,7 +1,7 @@
 name = "activitypub-relay"
 main = "src/server.ts"
-compatibility_date = "2025-09-15"
-compatibility_flags = [ "nodejs_compat_v2" ]
+compatibility_date = "2025-11-22"
+compatibility_flags = [ "nodejs_compat_v2", "enable_nodejs_fs_module" ]
 
 # Static assets configuration
 # Using the new Workers Assets feature

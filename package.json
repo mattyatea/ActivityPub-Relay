@@ -26,7 +26,15 @@
 			"zod": "^4.1.11",
 			"wrangler>zod": "^3.23.8",
 			"miniflare>zod": "^3.23.8"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"@prisma/client",
+			"@prisma/engines",
+			"esbuild",
+			"prisma",
+			"sharp",
+			"workerd"
+		]
 	},
 	"type": "module"
 }
