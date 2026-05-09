@@ -27,3 +27,4 @@ worker-configuration.d.ts
 /private_key.pem
 /public_key.pem
 /.sisyphus/
+/packages/frontend/dist/stats.html
