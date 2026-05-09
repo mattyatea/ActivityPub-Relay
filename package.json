@@ -28,10 +28,7 @@
 			"miniflare>zod": "^3.23.8"
 		},
 		"onlyBuiltDependencies": [
-			"@prisma/client",
-			"@prisma/engines",
 			"esbuild",
-			"prisma",
 			"sharp",
 			"workerd"
 		]
