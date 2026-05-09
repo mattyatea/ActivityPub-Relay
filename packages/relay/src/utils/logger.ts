@@ -2,9 +2,9 @@
  * Structured logging utility for Cloudflare Workers
  *
  * Best practices:
- * - Use console.log() for all log levels (info, warn, error)
+ * - Use console methods that match the log severity
  * - Structure logs as JSON objects for better querying in Cloudflare dashboard
- * - Include consistent fields: level, message, timestamp, and context
+ * - Include consistent top-level fields: level, message, timestamp, and context
  * - Avoid logging sensitive information (API keys, tokens, etc.)
  */
 
@@ -42,9 +42,7 @@ function createLogEntry(
  */
 function log(level: LogLevel, message: string, context?: LogContext): void {
 	const entry = createLogEntry(level, message, context);
-	// Always use console.log for Cloudflare Workers
-	// The dashboard can filter by level field
-	console.log(JSON.stringify(entry));
+	console[level](entry);
 }
 
 /**
@@ -119,7 +117,6 @@ export function sanitizeError(error: unknown): LogContext {
 		return {
 			errorName: error.name,
 			errorMessage: error.message,
-			errorStack: error.stack,
 		};
 	}
 	return {
@@ -130,7 +127,10 @@ export function sanitizeError(error: unknown): LogContext {
 /**
  * Helper to create activity-specific logger
  */
-export function createActivityLogger(activityType: string, actorId?: string): Logger {
+export function createActivityLogger(
+	activityType: string,
+	actorId?: string,
+): Logger {
 	return new Logger({
 		component: 'activitypub',
 		activityType,
