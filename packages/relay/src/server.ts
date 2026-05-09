@@ -4,12 +4,17 @@ import { followActivity } from '@/activityPub/follow.ts';
 import { relayActivity } from '@/activityPub/relay.ts';
 import { undoActivity } from '@/activityPub/undo.ts';
 import { router } from '@/api/router.ts';
+import {
+	type AppEnv,
+	addRequestLogContext,
+	requestLogging,
+} from '@/middleware/requestLogging.ts';
 import type { APRequest } from '@/types/activityPubTypes';
 import type { SignatureVerificationResult } from '@/utils/httpSignature';
 import { verifySignature } from '@/utils/httpSignature';
 import { logger, sanitizeError } from '@/utils/logger.ts';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 const relayActivityTypes = new Set([
 	'Create',
@@ -19,8 +24,10 @@ const relayActivityTypes = new Set([
 	'Remove',
 	'Add',
 	'Like',
-    'Undo'
+	'Undo',
 ]);
+
+app.use('*', requestLogging());
 
 // Static assets can be served without full environment check
 app.get('/assets/*', async (c) => {
@@ -40,6 +47,10 @@ app.get('/assets/*', async (c) => {
 
 app.use('*', async (c, next) => {
 	if (!c.env.HOSTNAME || !c.env.PUBLICKEY || !c.env.PRIVATEKEY || !c.env.DB) {
+		addRequestLogContext(c, {
+			outcome: 'error',
+			errorCode: 'missing_configuration',
+		});
 		logger.error('Missing environment variables', {
 			hasHostname: !!c.env.HOSTNAME,
 			hasPublicKey: !!c.env.PUBLICKEY,
@@ -59,6 +70,10 @@ app.use('/api/*', async (c, next) => {
 	const apiKey = c.req.header('X-API-Key');
 
 	if (!apiKey || apiKey !== c.env.API_KEY) {
+		addRequestLogContext(c, {
+			authenticated: false,
+			errorCode: 'invalid_api_key',
+		});
 		return c.json(
 			{
 				error: 'Unauthorized',
@@ -68,18 +83,11 @@ app.use('/api/*', async (c, next) => {
 		);
 	}
 
+	addRequestLogContext(c, { authenticated: true });
 	await next();
 });
 
 app.use('/api/*', async (c, next) => {
-	const requestLogger = logger.child({
-		component: 'api',
-		method: c.req.method,
-		path: c.req.path,
-	});
-
-	requestLogger.info('Incoming API request');
-
 	const { matched, response } = await handler.handle(c.req.raw, {
 		prefix: '/api',
 		context: {
@@ -88,14 +96,13 @@ app.use('/api/*', async (c, next) => {
 	});
 
 	if (matched) {
-		requestLogger.info('API request handled', {
+		addRequestLogContext(c, {
 			matched: true,
-			statusCode: response?.status,
 		});
 		return c.newResponse(response.body, response);
 	}
 
-	requestLogger.debug('No handler match, passing to next middleware');
+	addRequestLogContext(c, { matched: false });
 	await next();
 });
 
@@ -107,6 +114,10 @@ app.post('/inbox', async (c) => {
 	try {
 		verificationResult = await verifySignature(c.req.raw);
 	} catch (error) {
+		addRequestLogContext(c, {
+			errorCode: 'signature_verification_error',
+			...sanitizeError(error),
+		});
 		inboxLogger.warn('Signature verification threw error', {
 			...sanitizeError(error),
 		});
@@ -115,6 +126,10 @@ app.post('/inbox', async (c) => {
 
 	const { isValid, actor } = verificationResult;
 	if (!isValid) {
+		addRequestLogContext(c, {
+			actorId: actor.id,
+			errorCode: 'signature_verification_failed',
+		});
 		inboxLogger.warn('Signature verification failed', {
 			actor: actor.id,
 		});
@@ -125,29 +140,40 @@ app.post('/inbox', async (c) => {
 	try {
 		activity = (await c.req.json<APRequest>()) as APRequest;
 	} catch (error) {
+		addRequestLogContext(c, {
+			errorCode: 'invalid_activity_payload',
+			...sanitizeError(error),
+		});
 		inboxLogger.warn('Failed to parse activity payload', {
 			...sanitizeError(error),
 		});
 		return c.text('Bad Request: Invalid activity payload', 400);
 	}
 
-	inboxLogger.info('Received activity', {
+	addRequestLogContext(c, {
 		activityType: activity.type,
 		activityId: activity.id,
-		actor: activity.actor,
+		activityActor: activity.actor,
 	});
-    
+
 	if (activity.type === 'Follow') {
 		const followActivityResult = await followActivity(activity, actor, c);
+		addRequestLogContext(c, {
+			activityHandled: followActivityResult,
+		});
 		if (followActivityResult) {
 			return c.text('Accepted', 202);
 		} else {
+			addRequestLogContext(c, { errorCode: 'follow_handling_failed' });
 			return c.text('Bad Request: Follow handling failed', 400);
 		}
 	}
 
 	if (activity.type === 'Undo') {
 		const undoActivityResult = await undoActivity(activity, c);
+		addRequestLogContext(c, {
+			activityHandled: undoActivityResult,
+		});
 		if (undoActivityResult) {
 			return c.text('OK', 200);
 		}
@@ -155,9 +181,17 @@ app.post('/inbox', async (c) => {
 
 	if (relayActivityTypes.has(activity.type)) {
 		const relayResult = await relayActivity(activity, c);
+		addRequestLogContext(c, {
+			activityHandled: relayResult.success,
+			relayedCount: relayResult.relayedCount,
+			failureCount: relayResult.failureCount,
+		});
 
 		if (!relayResult.success) {
 			if (relayResult.relayedCount === 0 && relayResult.failureCount === 0) {
+				addRequestLogContext(c, {
+					activitySkippedReason: 'not_public_or_no_followers',
+				});
 				return c.text(
 					'Accepted: Activity is not public or no followers registered',
 					202,
@@ -168,6 +202,7 @@ app.post('/inbox', async (c) => {
 		return c.text(`Accepted`, 202);
 	}
 
+	addRequestLogContext(c, { errorCode: 'unhandled_activity_type' });
 	inboxLogger.warn('Unhandled activity type', {
 		activityType: activity.type,
 		activityId: activity.id,

@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { actors } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
+import type { AppEnv } from '@/middleware/requestLogging.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
@@ -30,9 +31,7 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
  */
 export const relayActivity = async (
 	activity: APActivity,
-	context: Context<{
-		Bindings: Env;
-	}>,
+	context: Context<AppEnv>,
 ): Promise<{
 	success: boolean;
 	relayedCount: number;

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { actors, followRequests } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
+import type { AppEnv } from '@/middleware/requestLogging.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
@@ -23,9 +24,7 @@ import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
  */
 export const undoActivity = async (
 	activity: APActivity,
-	context: Context<{
-		Bindings: Env;
-	}>,
+	context: Context<AppEnv>,
 ): Promise<boolean> => {
 	const logger = createActivityLogger('Undo', activity.actor);
 
