@@ -1,4 +1,6 @@
-import { createPrismaClient } from '@/lib/prisma.ts';
+import { count, desc, eq } from 'drizzle-orm';
+import { actors, followRequests } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import type {
 	FollowRequestStatus,
@@ -20,29 +22,26 @@ export async function listFollowRequests(
 	offset: number,
 	env: Env,
 ): Promise<ListFollowRequestsResponse> {
-	const prisma = createPrismaClient(env.DB);
-	try {
-		const [requests, total] = await Promise.all([
-			prisma.followRequest.findMany({
-				take: limit,
-				skip: offset,
-				orderBy: { id: 'desc' },
-			}),
-			prisma.followRequest.count(),
-		]);
+	const db = createDb(env.DB);
+	const [requests, totalRows] = await Promise.all([
+		db
+			.select()
+			.from(followRequests)
+			.orderBy(desc(followRequests.id))
+			.limit(limit)
+			.offset(offset),
+		db.select({ value: count() }).from(followRequests),
+	]);
 
-		return {
-			requests: requests.map((r) => ({
-				id: r.id,
-				actorId: r.actor ?? '',
-				status: 'pending' as FollowRequestStatus,
-				createdAt: undefined,
-			})),
-			total,
-		};
-	} finally {
-		await prisma.$disconnect();
-	}
+	return {
+		requests: requests.map((r) => ({
+			id: r.id,
+			actorId: r.actor ?? '',
+			status: 'pending' as FollowRequestStatus,
+			createdAt: undefined,
+		})),
+		total: totalRows[0]?.value ?? 0,
+	};
 }
 
 /**
@@ -57,19 +56,21 @@ export async function approveFollowRequest(
 	env: Env,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
 		// Follow申請を取得
-		const followRequest = await prisma.followRequest.findUnique({
-			where: { id: followRequestId },
-		});
+		const followRequest = await db
+			.select()
+			.from(followRequests)
+			.where(eq(followRequests.id, followRequestId))
+			.get();
 
 		if (!followRequest) {
 			logger.error('Follow request not found', { followRequestId });
 			return false;
 		}
 
-		if (!followRequest.activity_json) {
+		if (!followRequest.activityJson) {
 			logger.error('No activity JSON found for follow request', {
 				followRequestId,
 			});
@@ -85,7 +86,7 @@ export async function approveFollowRequest(
 		// DB保存されたActivityを取得
 		let activity: APActivity;
 		try {
-			activity = JSON.parse(followRequest.activity_json);
+			activity = JSON.parse(followRequest.activityJson);
 		} catch (error) {
 			logger.error('Invalid activity JSON', {
 				followRequestId,
@@ -99,28 +100,30 @@ export async function approveFollowRequest(
 		const actorData = await fetchActor(followRequest.actor);
 
 		// actorテーブルに追加
-		await prisma.actor.upsert({
-			where: { id: followRequest.actor },
-			update: {
-				inbox: actorData.inbox,
-				sharedInbox: actorData.endpoints?.sharedInbox ?? null,
-				publicKey: actorData.publicKey?.publicKeyPem ?? null,
-			},
-			create: {
+		await db
+			.insert(actors)
+			.values({
 				id: followRequest.actor,
 				inbox: actorData.inbox,
 				sharedInbox: actorData.endpoints?.sharedInbox ?? null,
 				publicKey: actorData.publicKey?.publicKeyPem ?? null,
-			},
-		});
+			})
+			.onConflictDoUpdate({
+				target: actors.id,
+				set: {
+					inbox: actorData.inbox,
+					sharedInbox: actorData.endpoints?.sharedInbox ?? null,
+					publicKey: actorData.publicKey?.publicKeyPem ?? null,
+				},
+			});
 
 		// Accept送信
 		await acceptFollow(activity, actorData.inbox, env);
 
 		// followRequestから削除
-		await prisma.followRequest.delete({
-			where: { id: followRequestId },
-		});
+		await db
+			.delete(followRequests)
+			.where(eq(followRequests.id, followRequestId));
 
 		logger.info('Follow request approved and Accept sent', {
 			followRequestId,
@@ -133,8 +136,6 @@ export async function approveFollowRequest(
 			...sanitizeError(error),
 		});
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }
 
@@ -150,18 +151,20 @@ export async function rejectFollowRequest(
 	env: Env,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
-		const followRequest = await prisma.followRequest.findUnique({
-			where: { id: followRequestId },
-		});
+		const followRequest = await db
+			.select()
+			.from(followRequests)
+			.where(eq(followRequests.id, followRequestId))
+			.get();
 
 		if (!followRequest) {
 			logger.error('Follow request not found', { followRequestId });
 			return false;
 		}
 
-		if (!followRequest.activity_json) {
+		if (!followRequest.activityJson) {
 			logger.error('No activity JSON found for follow request', {
 				followRequestId,
 			});
@@ -176,7 +179,7 @@ export async function rejectFollowRequest(
 		// DB保存されたActivityをパース
 		let activity: APActivity;
 		try {
-			activity = JSON.parse(followRequest.activity_json);
+			activity = JSON.parse(followRequest.activityJson);
 		} catch (error) {
 			logger.error('Invalid activity JSON', {
 				followRequestId,
@@ -193,9 +196,9 @@ export async function rejectFollowRequest(
 		await rejectFollow(activity, actorData.inbox, env);
 
 		// followRequestから削除
-		await prisma.followRequest.delete({
-			where: { id: followRequestId },
-		});
+		await db
+			.delete(followRequests)
+			.where(eq(followRequests.id, followRequestId));
 
 		logger.info('Follow request rejected and Reject sent', {
 			followRequestId,
@@ -208,7 +211,5 @@ export async function rejectFollowRequest(
 			...sanitizeError(error),
 		});
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }

@@ -1,22 +1,22 @@
-import { createPrismaClient } from '@/lib/prisma';
+import { asc, count, eq } from 'drizzle-orm';
+import { actors } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import { removeFollower } from '@/utils/activityPub';
 import { createServiceLogger, sanitizeError } from '@/utils/logger';
 
 export async function listActors(limit: number, offset: number, env: Env) {
-	const prisma = createPrismaClient(env.DB);
-	try {
-		const [actors, total] = await Promise.all([
-			prisma.actor.findMany({
-				take: limit,
-				skip: offset,
-				orderBy: { id: 'asc' },
-			}),
-			prisma.actor.count(),
-		]);
-		return { actors, total };
-	} finally {
-		await prisma.$disconnect();
-	}
+	const db = createDb(env.DB);
+	const [actorRows, totalRows] = await Promise.all([
+		db
+			.select()
+			.from(actors)
+			.orderBy(asc(actors.id))
+			.limit(limit)
+			.offset(offset),
+		db.select({ value: count() }).from(actors),
+	]);
+
+	return { actors: actorRows, total: totalRows[0]?.value ?? 0 };
 }
 
 /**
@@ -29,12 +29,14 @@ export async function listActors(limit: number, offset: number, env: Env) {
  */
 export async function removeActor(actorId: string, env: Env): Promise<boolean> {
 	const logger = createServiceLogger('ActorService');
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
 		// アクター情報を取得
-		const actor = await prisma.actor.findUnique({
-			where: { id: actorId },
-		});
+		const actor = await db
+			.select()
+			.from(actors)
+			.where(eq(actors.id, actorId))
+			.get();
 
 		if (!actor) {
 			logger.error('Actor not found', { actorId });
@@ -50,18 +52,19 @@ export async function removeActor(actorId: string, env: Env): Promise<boolean> {
 				targetInbox,
 			});
 		} catch (error) {
-			logger.warn('Failed to send Reject activity, proceeding with DB deletion', {
-				actorId,
-				targetInbox,
-				...sanitizeError(error),
-			});
+			logger.warn(
+				'Failed to send Reject activity, proceeding with DB deletion',
+				{
+					actorId,
+					targetInbox,
+					...sanitizeError(error),
+				},
+			);
 			// Reject送信に失敗してもDBからは削除する
 		}
 
 		// DBからアクターを削除
-		await prisma.actor.delete({
-			where: { id: actorId },
-		});
+		await db.delete(actors).where(eq(actors.id, actorId));
 
 		logger.info('Actor removed successfully', { actorId });
 		return true;
@@ -71,7 +74,5 @@ export async function removeActor(actorId: string, env: Env): Promise<boolean> {
 			...sanitizeError(error),
 		});
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }

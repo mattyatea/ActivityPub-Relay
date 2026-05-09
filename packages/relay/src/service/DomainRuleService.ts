@@ -1,5 +1,7 @@
-import { createPrismaClient } from '@/lib/prisma';
-import type { DomainRule, ListDomainRulesResponse } from '@/types/api.ts';
+import { count, desc, eq } from 'drizzle-orm';
+import { domainRules } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
+import type { ListDomainRulesResponse } from '@/types/api.ts';
 
 /**
  * ドメインルール一覧を取得する
@@ -14,30 +16,27 @@ export async function listDomainRules(
 	offset: number,
 	env: Env,
 ): Promise<ListDomainRulesResponse> {
-	const prisma = createPrismaClient(env.DB);
-	try {
-		const [rules, total] = await Promise.all([
-			prisma.domainRule.findMany({
-				take: limit,
-				skip: offset,
-				orderBy: { id: 'desc' },
-			}),
-			prisma.domainRule.count(),
-		]);
+	const db = createDb(env.DB);
+	const [rules, totalRows] = await Promise.all([
+		db
+			.select()
+			.from(domainRules)
+			.orderBy(desc(domainRules.id))
+			.limit(limit)
+			.offset(offset),
+		db.select({ value: count() }).from(domainRules),
+	]);
 
-		return {
-			rules: rules.map((r) => ({
-				id: r.id,
-				pattern: r.pattern,
-				isRegex: r.is_regex === 1,
-				reason: r.reason ?? undefined,
-				createdAt: r.created_at || undefined,
-			})),
-			total,
-		};
-	} finally {
-		await prisma.$disconnect();
-	}
+	return {
+		rules: rules.map((r) => ({
+			id: r.id,
+			pattern: r.pattern,
+			isRegex: r.isRegex === 1,
+			reason: r.reason ?? undefined,
+			createdAt: r.createdAt || undefined,
+		})),
+		total: totalRows[0]?.value ?? 0,
+	};
 }
 
 /**
@@ -55,21 +54,19 @@ export async function addDomainRule(
 	reason: string | undefined,
 	env: Env,
 ): Promise<number> {
-	const prisma = createPrismaClient(env.DB);
-	try {
-		const rule = await prisma.domainRule.create({
-			data: {
-				pattern,
-				is_regex: isRegex ? 1 : 0,
-				reason,
-				created_at: Math.floor(Date.now() / 1000),
-			},
-		});
+	const db = createDb(env.DB);
+	const rule = await db
+		.insert(domainRules)
+		.values({
+			pattern,
+			isRegex: isRegex ? 1 : 0,
+			reason,
+			createdAt: Math.floor(Date.now() / 1000),
+		})
+		.returning({ id: domainRules.id })
+		.get();
 
-		return rule.id;
-	} finally {
-		await prisma.$disconnect();
-	}
+	return rule.id;
 }
 
 /**
@@ -79,21 +76,14 @@ export async function addDomainRule(
  * @param env - 環境変数とD1データベース
  * @returns {Promise<boolean>} 成功した場合はtrue
  */
-export async function removeDomainRule(
-	id: number,
-	env: Env,
-): Promise<boolean> {
-	const prisma = createPrismaClient(env.DB);
+export async function removeDomainRule(id: number, env: Env): Promise<boolean> {
+	const db = createDb(env.DB);
 	try {
-		await prisma.domainRule.delete({
-			where: { id },
-		});
+		await db.delete(domainRules).where(eq(domainRules.id, id));
 
 		return true;
 	} catch (error) {
 		console.error('Failed to remove domain rule:', error);
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }

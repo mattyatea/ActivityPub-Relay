@@ -1,4 +1,6 @@
-import { createPrismaClient } from '@/lib/prisma';
+import { eq } from 'drizzle-orm';
+import { settings } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import type { DomainBlockMode, SettingsResponse } from '@/types/api.ts';
 
 /**
@@ -8,18 +10,16 @@ import type { DomainBlockMode, SettingsResponse } from '@/types/api.ts';
  * @returns {Promise<SettingsResponse>}
  */
 export async function getSettings(env: Env): Promise<SettingsResponse> {
-	const prisma = createPrismaClient(env.DB);
-	try {
-		const modeSetting = await prisma.setting.findUnique({
-			where: { key: 'domain_block_mode' },
-		});
+	const db = createDb(env.DB);
+	const modeSetting = await db
+		.select()
+		.from(settings)
+		.where(eq(settings.key, 'domain_block_mode'))
+		.get();
 
-		return {
-			domainBlockMode: (modeSetting?.value as DomainBlockMode) ?? 'blacklist',
-		};
-	} finally {
-		await prisma.$disconnect();
-	}
+	return {
+		domainBlockMode: (modeSetting?.value as DomainBlockMode) ?? 'blacklist',
+	};
 }
 
 /**
@@ -33,22 +33,22 @@ export async function updateSettings(
 	domainBlockMode: DomainBlockMode | undefined,
 	env: Env,
 ): Promise<boolean> {
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
 		if (domainBlockMode) {
-			await prisma.setting.upsert({
-				where: { key: 'domain_block_mode' },
-				update: { value: domainBlockMode },
-				create: { key: 'domain_block_mode', value: domainBlockMode },
-			});
+			await db
+				.insert(settings)
+				.values({ key: 'domain_block_mode', value: domainBlockMode })
+				.onConflictDoUpdate({
+					target: settings.key,
+					set: { value: domainBlockMode },
+				});
 		}
 
 		return true;
 	} catch (error) {
 		console.error('Failed to update settings:', error);
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }
 
@@ -63,11 +63,13 @@ export async function getSettingByKey(
 	key: string,
 	env: Env,
 ): Promise<{ key: string; value: string }> {
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
-		const setting = await prisma.setting.findUnique({
-			where: { key },
-		});
+		const setting = await db
+			.select()
+			.from(settings)
+			.where(eq(settings.key, key))
+			.get();
 
 		if (!setting) {
 			// 設定が存在しない場合はデフォルト値を返す
@@ -85,8 +87,6 @@ export async function getSettingByKey(
 	} catch (error) {
 		console.error('Failed to get setting:', error);
 		throw error;
-	} finally {
-		await prisma.$disconnect();
 	}
 }
 
@@ -103,19 +103,16 @@ export async function updateSettingByKey(
 	value: string,
 	env: Env,
 ): Promise<boolean> {
-	const prisma = createPrismaClient(env.DB);
+	const db = createDb(env.DB);
 	try {
-		await prisma.setting.upsert({
-			where: { key },
-			update: { value },
-			create: { key, value },
+		await db.insert(settings).values({ key, value }).onConflictDoUpdate({
+			target: settings.key,
+			set: { value },
 		});
 
 		return true;
 	} catch (error) {
 		console.error('Failed to update setting:', error);
 		return false;
-	} finally {
-		await prisma.$disconnect();
 	}
 }
