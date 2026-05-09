@@ -8,7 +8,7 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
-		"@orpc/contract": "managed",
-		"zod": "managed"
+		"@orpc/contract": "catalog:",
+		"zod": "catalog:"
 	}
 }

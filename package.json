@@ -20,18 +20,5 @@
 		"concurrently": "^9.2.1",
 		"typescript": "^6.0.3"
 	},
-	"pnpm": {
-		"overrides": {
-			"@orpc/contract": "^1.9.3",
-			"zod": "^4.1.11",
-			"wrangler>zod": "^3.23.8",
-			"miniflare>zod": "^3.23.8"
-		},
-		"onlyBuiltDependencies": [
-			"esbuild",
-			"sharp",
-			"workerd"
-		]
-	},
 	"type": "module"
 }
