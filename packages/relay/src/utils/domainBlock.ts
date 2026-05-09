@@ -1,6 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { domainRules, settings } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
+import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
+
+const logger = createServiceLogger('DomainBlock');
 
 /**
  * アクターIDからドメインを抽出する
@@ -13,7 +16,10 @@ export function extractDomainFromActorId(actorId: string): string {
 		const url = new URL(actorId);
 		return url.hostname;
 	} catch (error) {
-		console.error('Invalid actor ID:', actorId, error);
+		logger.warn('Invalid actor ID', {
+			actorId,
+			...sanitizeError(error),
+		});
 		return '';
 	}
 }
@@ -36,7 +42,11 @@ function matchesDomainPattern(
 			const regex = new RegExp(pattern);
 			return regex.test(domain);
 		} catch (error) {
-			console.error('Invalid regex pattern:', pattern, error);
+			logger.warn('Invalid regex pattern', {
+				domain,
+				pattern,
+				...sanitizeError(error),
+			});
 			return false;
 		}
 	}

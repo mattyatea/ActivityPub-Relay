@@ -2,6 +2,9 @@ import { eq } from 'drizzle-orm';
 import { settings } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { DomainBlockMode, SettingsResponse } from '@/types/api.ts';
+import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
+
+const logger = createServiceLogger('SettingsService');
 
 /**
  * 設定を取得する
@@ -47,7 +50,10 @@ export async function updateSettings(
 
 		return true;
 	} catch (error) {
-		console.error('Failed to update settings:', error);
+		logger.error('Failed to update settings', {
+			domainBlockMode,
+			...sanitizeError(error),
+		});
 		return false;
 	}
 }
@@ -85,7 +91,10 @@ export async function getSettingByKey(
 			value: setting.value,
 		};
 	} catch (error) {
-		console.error('Failed to get setting:', error);
+		logger.error('Failed to get setting', {
+			key,
+			...sanitizeError(error),
+		});
 		throw error;
 	}
 }
@@ -112,7 +121,10 @@ export async function updateSettingByKey(
 
 		return true;
 	} catch (error) {
-		console.error('Failed to update setting:', error);
+		logger.error('Failed to update setting', {
+			key,
+			...sanitizeError(error),
+		});
 		return false;
 	}
 }

@@ -2,6 +2,9 @@ import { count, desc, eq } from 'drizzle-orm';
 import { domainRules } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { ListDomainRulesResponse } from '@/types/api.ts';
+import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
+
+const logger = createServiceLogger('DomainRuleService');
 
 /**
  * ドメインルール一覧を取得する
@@ -93,7 +96,10 @@ export async function removeDomainRule(id: number, env: Env): Promise<boolean> {
 
 		return true;
 	} catch (error) {
-		console.error('Failed to remove domain rule:', error);
+		logger.error('Failed to remove domain rule', {
+			id,
+			...sanitizeError(error),
+		});
 		return false;
 	}
 }
