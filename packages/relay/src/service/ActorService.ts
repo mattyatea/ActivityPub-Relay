@@ -1,6 +1,7 @@
 import { asc, count, eq } from 'drizzle-orm';
 import { actors } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
+import { invalidateDeliveryRecipientCache } from '@/service/CacheService.ts';
 import { removeFollower } from '@/utils/activityPub';
 import { createServiceLogger, sanitizeError } from '@/utils/logger';
 
@@ -65,6 +66,7 @@ export async function removeActor(actorId: string, env: Env): Promise<boolean> {
 
 		// DBからアクターを削除
 		await db.delete(actors).where(eq(actors.id, actorId));
+		await invalidateDeliveryRecipientCache(env);
 
 		logger.info('Actor removed successfully', { actorId });
 		return true;

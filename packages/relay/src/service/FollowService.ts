@@ -1,6 +1,7 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { actors, followRequests } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
+import { invalidateDeliveryRecipientCache } from '@/service/CacheService.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import type {
 	FollowRequestStatus,
@@ -116,6 +117,7 @@ export async function approveFollowRequest(
 					publicKey: actorData.publicKey?.publicKeyPem ?? null,
 				},
 			});
+		await invalidateDeliveryRecipientCache(env);
 
 		// Accept送信
 		await acceptFollow(activity, actorData.inbox, env);

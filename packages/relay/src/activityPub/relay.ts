@@ -2,10 +2,93 @@ import type { Context } from 'hono';
 import { actors } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { AppEnv } from '@/middleware/requestLogging.ts';
+import {
+	type DeliveryRecipient,
+	getCachedDeliveryRecipients,
+	setCachedDeliveryRecipients,
+} from '@/service/CacheService.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
+
+const DELIVERY_CONCURRENCY = 12;
+
+const safeHostname = (value: string) => {
+	try {
+		return new URL(value).hostname;
+	} catch {
+		return null;
+	}
+};
+
+async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
+	const cachedRecipients = await getCachedDeliveryRecipients(env);
+	if (cachedRecipients) {
+		return cachedRecipients;
+	}
+
+	const db = createDb(env.DB);
+	// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
+	const followers = await db
+		.select({
+			id: actors.id,
+			inbox: actors.inbox,
+			sharedInbox: actors.sharedInbox,
+		})
+		.from(actors);
+
+	const recipientsByInbox = new Map<string, DeliveryRecipient>();
+	for (const follower of followers) {
+		const inbox = follower.sharedInbox ?? follower.inbox;
+		if (!recipientsByInbox.has(inbox)) {
+			recipientsByInbox.set(inbox, {
+				actorHost: safeHostname(follower.id),
+				inbox,
+			});
+		}
+	}
+
+	const recipients = Array.from(recipientsByInbox.values());
+	await setCachedDeliveryRecipients(env, recipients);
+
+	return recipients;
+}
+
+async function settleDeliveries(
+	recipients: DeliveryRecipient[],
+	deliver: (recipient: DeliveryRecipient) => Promise<void>,
+): Promise<PromiseSettledResult<void>[]> {
+	const results = new Array<PromiseSettledResult<void>>(recipients.length);
+	let nextIndex = 0;
+
+	async function worker() {
+		while (true) {
+			const currentIndex = nextIndex;
+			nextIndex += 1;
+
+			const recipient = recipients[currentIndex];
+			if (!recipient) {
+				return;
+			}
+
+			try {
+				await deliver(recipient);
+				results[currentIndex] = { status: 'fulfilled', value: undefined };
+			} catch (reason) {
+				results[currentIndex] = { status: 'rejected', reason };
+			}
+		}
+	}
+
+	const workers = Array.from(
+		{ length: Math.min(DELIVERY_CONCURRENCY, recipients.length) },
+		() => worker(),
+	);
+	await Promise.all(workers);
+
+	return results;
+}
 
 /**
  * Create/Announce Activityをリレーする
@@ -46,36 +129,19 @@ export const relayActivity = async (
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
-	const db = createDb(context.env.DB);
-	// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
-	const followers = await db
-		.select({
-			id: actors.id,
-			inbox: actors.inbox,
-			sharedInbox: actors.sharedInbox,
-		})
-		.from(actors);
+	const deliveryRecipients = await getDeliveryRecipients(context.env);
 
-	if (followers.length === 0) {
+	if (deliveryRecipients.length === 0) {
 		logger.info('No followers registered, skipping relay', {
 			activityId: activity.id,
 		});
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
-	const safeHostname = (value: string) => {
-		try {
-			return new URL(value).hostname;
-		} catch {
-			return null;
-		}
-	};
-
 	const originHost = safeHostname(activity.actor);
-	const recipients = followers.filter((follower) => {
+	const recipients = deliveryRecipients.filter((recipient) => {
 		if (!originHost) return true;
-		const followerHost = safeHostname(follower.id);
-		return followerHost !== originHost;
+		return recipient.actorHost !== originHost;
 	});
 
 	if (recipients.length === 0) {
@@ -85,13 +151,10 @@ export const relayActivity = async (
 	// Stringify activity once and reuse for all deliveries
 	const activityJson = JSON.stringify(activity);
 
-	const deliveries = await Promise.allSettled(
-		recipients.map(async (follower) => {
-			const inbox = follower.sharedInbox ?? follower.inbox;
-			const headers = signHeaders(activityJson, inbox, context.env);
-			await sendActivity(inbox, activity, headers);
-		}),
-	);
+	const deliveries = await settleDeliveries(recipients, async (recipient) => {
+		const headers = signHeaders(activityJson, recipient.inbox, context.env);
+		await sendActivity(recipient.inbox, activity, headers);
+	});
 
 	const failures = deliveries.filter((result) => result.status === 'rejected');
 
