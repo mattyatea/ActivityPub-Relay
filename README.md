@@ -128,10 +128,10 @@ npx wrangler d1 create activitypub-relay
 
 ### 5. データベースマイグレーション
 
-Prismaスキーマを生成してマイグレーションを実行:
+Drizzleスキーマからマイグレーションを生成して実行:
 
 ```bash
-# スキーマ生成
+# マイグレーション生成
 pnpm db:generate
 
 # ローカルマイグレーション
@@ -181,7 +181,7 @@ pnpm build
 pnpm deploy
 
 # DB操作
-pnpm db:generate      # Prismaスキーマ生成
+pnpm db:generate      # Drizzleマイグレーション生成
 pnpm db:migrate       # ローカルマイグレーション
 pnpm db:migrate:prod  # 本番マイグレーション
 
