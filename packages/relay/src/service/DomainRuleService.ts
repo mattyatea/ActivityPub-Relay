@@ -79,6 +79,16 @@ export async function addDomainRule(
 export async function removeDomainRule(id: number, env: Env): Promise<boolean> {
 	const db = createDb(env.DB);
 	try {
+		const rule = await db
+			.select({ id: domainRules.id })
+			.from(domainRules)
+			.where(eq(domainRules.id, id))
+			.get();
+
+		if (!rule) {
+			return false;
+		}
+
 		await db.delete(domainRules).where(eq(domainRules.id, id));
 
 		return true;
