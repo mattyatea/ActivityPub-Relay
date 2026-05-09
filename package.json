@@ -16,9 +16,9 @@
 		"db:migrate:prod": "pnpm --filter relay db:migrate:prod"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.5",
+		"@biomejs/biome": "2.4.15",
 		"concurrently": "^9.2.1",
-		"typescript": "^5.9.3"
+		"typescript": "^6.0.3"
 	},
 	"pnpm": {
 		"overrides": {
