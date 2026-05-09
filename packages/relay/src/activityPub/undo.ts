@@ -1,8 +1,9 @@
+import { eq } from 'drizzle-orm';
 import type { Context } from 'hono';
-import { createPrismaClient } from '@/lib/prisma.ts';
+import { actors, followRequests } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
-import {relayActivity} from "@/activityPub/relay.ts";
 
 /**
  * Undo Activityを処理する
@@ -37,45 +38,36 @@ export const undoActivity = async (
 		});
 		return false;
 	}
-    
-    
-	const prisma = createPrismaClient(context.env.DB);
-	
-    const followRequest = await prisma.followRequest.findFirst({
-        where: {
-            id: followActivityId
-        }
-    })
-    
-    // フォローリクエストのアクティビティなら、それを処理する
-    if (followRequest) {
-        try {
-            await prisma.followRequest.delete({
-                where: { id: followActivityId },
-            });
-            await prisma.actor.delete({
-                where: { id: activity.actor },
-            });
-            logger.info('Successfully processed Undo activity', {
-                activityId: activity.id,
-                followActivityId,
-            });
-            return true;
-        } catch (error) {
-            logger.error('Failed to undo activity', {
-                activityId: activity.id,
-                followActivityId,
-                ...sanitizeError(error),
-            });
-            return false;
-        } finally {
-            await prisma.$disconnect();
-        }
-    } else {
-        // それ以外の時は、普通にリレーする
-        return false;
-    }
-    
-    
 
+	const db = createDb(context.env.DB);
+	const followRequest = await db
+		.select()
+		.from(followRequests)
+		.where(eq(followRequests.id, followActivityId))
+		.get();
+
+	// フォローリクエストのアクティビティなら、それを処理する
+	if (!followRequest) {
+		// それ以外の時は、普通にリレーする
+		return false;
+	}
+
+	try {
+		await db
+			.delete(followRequests)
+			.where(eq(followRequests.id, followActivityId));
+		await db.delete(actors).where(eq(actors.id, activity.actor));
+		logger.info('Successfully processed Undo activity', {
+			activityId: activity.id,
+			followActivityId,
+		});
+		return true;
+	} catch (error) {
+		logger.error('Failed to undo activity', {
+			activityId: activity.id,
+			followActivityId,
+			...sanitizeError(error),
+		});
+		return false;
+	}
 };

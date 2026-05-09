@@ -1,4 +1,6 @@
-import { createPrismaClient } from '@/lib/prisma.ts';
+import { eq } from 'drizzle-orm';
+import { domainRules, settings } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 
 /**
  * アクターIDからドメインを抽出する
@@ -54,39 +56,37 @@ export async function isDomainBlocked(
 	domain: string,
 	db: D1Database,
 ): Promise<boolean> {
-	const prisma = createPrismaClient(db);
-	try {
-		// ブロックモードを取得
-		const modeSetting = await prisma.setting.findUnique({
-			where: { key: 'domain_block_mode' },
-		});
+	const drizzleDb = createDb(db);
+	// ブロックモードを取得
+	const modeSetting = await drizzleDb
+		.select()
+		.from(settings)
+		.where(eq(settings.key, 'domain_block_mode'))
+		.get();
 
-		const mode = modeSetting?.value ?? 'blacklist';
+	const mode = modeSetting?.value ?? 'blacklist';
 
-		// 全てのドメインルールを取得
-		const rules = await prisma.domainRule.findMany({
-			select: {
-				pattern: true,
-				is_regex: true,
-			},
-		});
+	// 全てのドメインルールを取得
+	const rules = await drizzleDb
+		.select({
+			pattern: domainRules.pattern,
+			isRegex: domainRules.isRegex,
+		})
+		.from(domainRules);
 
-		if (rules.length === 0) {
-			// ルールが無い場合
-			// blacklist: 全て許可 (false)
-			// whitelist: 全て拒否 (true)
-			return mode === 'whitelist';
-		}
-
-		// ドメインがルールにマッチするかチェック
-		const matches = rules.some((rule) =>
-			matchesDomainPattern(domain, rule.pattern, rule.is_regex === 1),
-		);
-
-		// blacklist: マッチしたらブロック
-		// whitelist: マッチしなかったらブロック
-		return mode === 'blacklist' ? matches : !matches;
-	} finally {
-		await prisma.$disconnect();
+	if (rules.length === 0) {
+		// ルールが無い場合
+		// blacklist: 全て許可 (false)
+		// whitelist: 全て拒否 (true)
+		return mode === 'whitelist';
 	}
+
+	// ドメインがルールにマッチするかチェック
+	const matches = rules.some((rule) =>
+		matchesDomainPattern(domain, rule.pattern, rule.isRegex === 1),
+	);
+
+	// blacklist: マッチしたらブロック
+	// whitelist: マッチしなかったらブロック
+	return mode === 'blacklist' ? matches : !matches;
 }

@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import type { Context } from 'hono';
-import { createPrismaClient } from '@/lib/prisma.ts';
+import { actors, followRequests, settings } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
 import {
 	acceptFollow,
@@ -39,7 +41,7 @@ export const followActivity = async (
 	const logger = createActivityLogger('Follow', activity.actor);
 
 	if (checkPublicCollection(activity)) {
-		const prisma = createPrismaClient(context.env.DB);
+		const db = createDb(context.env.DB);
 		try {
 			let followerRecord = actor;
 			if (actor.id !== activity.actor) {
@@ -63,16 +65,20 @@ export const followActivity = async (
 			}
 
 			// 自動承認モードの確認
-			const autoApproveSetting = await prisma.setting.findUnique({
-				where: { key: 'auto_approve_follows' },
-			});
+			const autoApproveSetting = await db
+				.select()
+				.from(settings)
+				.where(eq(settings.key, 'auto_approve_follows'))
+				.get();
 
 			const autoApprove = autoApproveSetting?.value === 'true';
 
 			// フォローリクエストの存在確認と作成
-			const existingFollowRequest = await prisma.followRequest.findUnique({
-				where: { id: activity.id },
-			});
+			const existingFollowRequest = await db
+				.select()
+				.from(followRequests)
+				.where(eq(followRequests.id, activity.id))
+				.get();
 
 			if (!existingFollowRequest) {
 				const followObjectId: string | null =
@@ -82,13 +88,11 @@ export const followActivity = async (
 							? activity.object.id
 							: null;
 
-				await prisma.followRequest.create({
-					data: {
-						id: activity.id,
-						actor: activity.actor,
-						object: followObjectId,
-						activity_json: JSON.stringify(activity),
-					},
+				await db.insert(followRequests).values({
+					id: activity.id,
+					actor: activity.actor,
+					object: followObjectId,
+					activityJson: JSON.stringify(activity),
 				});
 			}
 
@@ -96,28 +100,30 @@ export const followActivity = async (
 			if (autoApprove) {
 				try {
 					// actorテーブルに追加
-					await prisma.actor.upsert({
-						where: { id: activity.actor },
-						update: {
-							inbox: followerRecord.inbox,
-							sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
-							publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
-						},
-						create: {
+					await db
+						.insert(actors)
+						.values({
 							id: activity.actor,
 							inbox: followerRecord.inbox,
 							sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
 							publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
-						},
-					});
+						})
+						.onConflictDoUpdate({
+							target: actors.id,
+							set: {
+								inbox: followerRecord.inbox,
+								sharedInbox: followerRecord.endpoints?.sharedInbox ?? null,
+								publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
+							},
+						});
 
 					// Accept送信
 					await acceptFollow(activity, followerRecord.inbox, context.env);
 
 					// followRequestから削除
-					await prisma.followRequest.delete({
-						where: { id: activity.id },
-					});
+					await db
+						.delete(followRequests)
+						.where(eq(followRequests.id, activity.id));
 
 					logger.info('Follow request auto-approved and Accept sent', {
 						domain,
@@ -143,8 +149,6 @@ export const followActivity = async (
 				...sanitizeError(error),
 			});
 			return false;
-		} finally {
-			await prisma.$disconnect();
 		}
 	} else {
 		logger.warn('Follow activity is not for the public collection', {
