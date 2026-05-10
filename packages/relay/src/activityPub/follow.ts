@@ -3,7 +3,6 @@ import type { Context } from 'hono';
 import { actors, followRequests, settings } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { AppEnv } from '@/middleware/requestLogging.ts';
-import { invalidateDeliveryRecipientCache } from '@/service/CacheService.ts';
 import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
 import {
 	acceptFollow,
@@ -119,8 +118,6 @@ export const followActivity = async (
 								publicKey: followerRecord.publicKey?.publicKeyPem ?? null,
 							},
 						});
-					await invalidateDeliveryRecipientCache(context.env);
-
 					// Accept送信
 					await acceptFollow(activity, followerRecord.inbox, context.env);
 

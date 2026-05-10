@@ -3,7 +3,6 @@ import type { Context } from 'hono';
 import { actors, followRequests } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { AppEnv } from '@/middleware/requestLogging.ts';
-import { invalidateDeliveryRecipientCache } from '@/service/CacheService.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
@@ -57,7 +56,6 @@ export const undoActivity = async (
 			.delete(followRequests)
 			.where(eq(followRequests.id, followActivityId));
 		await db.delete(actors).where(eq(actors.id, activity.actor));
-		await invalidateDeliveryRecipientCache(context.env);
 		logger.info('Successfully processed Undo activity', {
 			activityId: activity.id,
 			followActivityId,
