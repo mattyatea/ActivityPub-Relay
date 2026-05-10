@@ -1,13 +1,14 @@
 <template>
   <div class="app">
     <Navbar :currentPage="currentPage" />
-    <main class="container">
+    <ElMain class="container">
       <slot />
-    </main>
+    </ElMain>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ElMain } from 'element-plus';
 import Navbar from '../components/Navbar.vue';
 
 interface Props {
@@ -26,7 +27,7 @@ withDefaults(defineProps<Props>(), {
   flex-direction: column;
 }
 
-main {
+.container {
   flex: 1;
 }
 </style>

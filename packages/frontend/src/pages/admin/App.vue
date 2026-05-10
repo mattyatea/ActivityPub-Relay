@@ -1,7 +1,7 @@
 <template>
   <MainLayout currentPage="admin">
     <div class="admin">
-      <h1>Admin Panel</h1>
+      <ElPageHeader title="" content="Admin Panel" class="page-header" />
 
       <Alert
         v-if="alertMessage"
@@ -56,6 +56,7 @@
 </template>
 
 <script setup lang="ts">
+import { ElPageHeader } from 'element-plus';
 import { ref } from 'vue';
 import { orpc, setApiKey } from '@/composables/useApiClient';
 import { useApiError } from '@/composables/useApiError';
@@ -295,11 +296,8 @@ const handleRemoveActor = async (actorId: string) => {
   padding: 32px 20px;
 }
 
-.admin h1 {
-  font-size: 32px;
-  font-weight: 700;
+.page-header {
   margin-bottom: 24px;
-  letter-spacing: -0.5px;
 }
 
 @media (max-width: 768px) {
@@ -309,8 +307,5 @@ const handleRemoveActor = async (actorId: string) => {
     padding: 20px 16px;
   }
 
-  .admin h1 {
-    font-size: 24px;
-  }
 }
 </style>

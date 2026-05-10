@@ -1,33 +1,31 @@
 <template>
-  <nav class="navbar">
-    <div class="nav-container">
-      <a href="/" class="nav-brand">
-        ActivityPub Relay
-      </a>
-
-      <div class="nav-links">
-        <a href="/" class="nav-link" :class="{ active: currentPage === 'home' }">
-          Home
-        </a>
-        <a href="/admin" class="nav-link" :class="{ active: currentPage === 'admin' }">
-          Admin
-        </a>
-        <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
-          {{ isDark ? '☀' : '☾' }}
-        </button>
-      </div>
-    </div>
-  </nav>
+  <ElMenu class="navbar" mode="horizontal" :default-active="currentPage">
+    <ElMenuItem class="nav-brand" index="brand">
+      <ElLink href="/" :underline="false">ActivityPub Relay</ElLink>
+    </ElMenuItem>
+    <div class="nav-spacer" />
+    <ElMenuItem index="home">
+      <ElLink href="/" :underline="false">Home</ElLink>
+    </ElMenuItem>
+    <ElMenuItem index="admin">
+      <ElLink href="/admin" :underline="false">Admin</ElLink>
+    </ElMenuItem>
+    <ElMenuItem index="theme">
+      <ElButton circle plain :aria-label="'Toggle theme'" @click="toggleTheme">
+        {{ isDark ? '☀' : '☾' }}
+      </ElButton>
+    </ElMenuItem>
+  </ElMenu>
 </template>
 
 <script setup lang="ts">
+import { ElButton, ElLink, ElMenu, ElMenuItem } from 'element-plus';
 import { useTheme } from '../composables/useTheme';
-
 interface Props {
 	currentPage?: 'home' | 'admin';
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
 	currentPage: 'home',
 });
 
@@ -36,64 +34,16 @@ const { isDark, toggleTheme } = useTheme();
 
 <style scoped>
 .navbar {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  padding: 0 max(20px, calc((100vw - 1200px) / 2 + 20px));
 }
 
-.nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nav-brand {
-  text-decoration: none;
+.nav-brand :deep(.el-link__inner) {
   font-weight: 600;
-  font-size: 16px;
-  color: var(--text-primary);
+  color: var(--el-text-color-primary);
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
+.nav-spacer {
+  flex: 1;
 }
 
-.nav-link {
-  text-decoration: none;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
-
-.nav-link:hover {
-  color: var(--text-primary);
-}
-
-.nav-link.active {
-  color: var(--text-primary);
-}
-
-.theme-toggle {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--text-primary);
-}
-
-.theme-toggle:hover {
-  background: var(--bg-secondary);
-}
-
-@media (max-width: 768px) {
-  .nav-links {
-    gap: 16px;
-  }
-}
 </style>

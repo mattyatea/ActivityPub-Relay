@@ -1,66 +1,83 @@
 <template>
-  <Card title="Domain Rules" class="section">
-    <div class="form-group">
-      <label>
-        Pattern
-        <span v-if="!isValidPattern && newRule.pattern" class="validation-error">
-          Invalid pattern format
-        </span>
-      </label>
-      <input
-        v-model="newRule.pattern"
-        :class="{ 'is-invalid': !isValidPattern && newRule.pattern }"
-        placeholder="example.com"
-        @keyup.enter="handleAddRule"
-      />
-    </div>
-    <div class="form-group">
-      <label class="checkbox-label">
-        <input v-model="newRule.isRegex" type="checkbox" />
-        <span>Is Regex Pattern</span>
-      </label>
-      <small v-if="newRule.isRegex" class="help-text">
-        JavaScript regex pattern (e.g., ^example\\.com$)
-      </small>
-    </div>
-    <div class="form-group">
-      <label>Reason (optional)</label>
-      <input
-        v-model="newRule.reason"
-        placeholder="Why block/allow this domain?"
-        @keyup.enter="handleAddRule"
-      />
-    </div>
-    <button @click="handleAddRule" :disabled="!newRule.pattern || !isValidPattern || adding">
-      {{ adding ? 'Adding...' : 'Add Rule' }}
-    </button>
+  <ElCard class="section" shadow="hover">
+    <template #header>Domain Rules</template>
+    <ElForm label-position="top" @submit.prevent>
+      <ElFormItem
+        label="Pattern"
+        :error="!isValidPattern && newRule.pattern ? 'Invalid pattern format' : ''"
+      >
+        <ElInput
+          v-model="newRule.pattern"
+          placeholder="example.com"
+          :validate-event="false"
+          @keyup.enter="handleAddRule"
+        />
+      </ElFormItem>
+      <ElFormItem>
+        <ElCheckbox v-model="newRule.isRegex">Is Regex Pattern</ElCheckbox>
+        <ElText v-if="newRule.isRegex" class="help-text" type="info">
+          JavaScript regex pattern (e.g., ^example\.com$)
+        </ElText>
+      </ElFormItem>
+      <ElFormItem label="Reason (optional)">
+        <ElInput
+          v-model="newRule.reason"
+          placeholder="Why block/allow this domain?"
+          @keyup.enter="handleAddRule"
+        />
+      </ElFormItem>
+      <ElButton
+        type="primary"
+        :disabled="!newRule.pattern || !isValidPattern"
+        :loading="adding"
+        @click="handleAddRule"
+      >
+        Add Rule
+      </ElButton>
+    </ElForm>
 
-    <div v-if="domainRules.length > 0" class="list">
-      <div v-for="rule in domainRules" :key="rule.id" class="list-item">
-        <div class="list-item-info">
-          <div class="list-item-id">{{ rule.pattern }}</div>
-          <span class="badge" v-if="rule.isRegex">Regex</span>
-          <span v-if="rule.reason" class="rule-reason">{{ rule.reason }}</span>
-        </div>
-        <button
-          @click="$emit('delete', rule.id)"
-          class="danger"
-          :disabled="deleting.has(rule.id)"
-        >
-          {{ deleting.has(rule.id) ? 'Deleting...' : 'Delete' }}
-        </button>
-      </div>
-    </div>
-    <div v-else class="empty">
-      <p>No domain rules configured</p>
-    </div>
-  </Card>
+    <ElTable v-if="domainRules.length > 0" class="rules-table" :data="domainRules" style="width: 100%">
+      <ElTableColumn prop="pattern" label="Pattern" min-width="180" />
+      <ElTableColumn label="Type" width="100">
+        <template #default="{ row }">
+          <ElTag v-if="row.isRegex" type="primary">Regex</ElTag>
+        </template>
+      </ElTableColumn>
+      <ElTableColumn prop="reason" label="Reason" min-width="220" show-overflow-tooltip />
+      <ElTableColumn label="Actions" width="120" align="right">
+        <template #default="{ row }">
+          <ElButton
+            type="danger"
+            size="small"
+            plain
+            :loading="deleting.has(row.id)"
+            @click="$emit('delete', row.id)"
+          >
+            Delete
+          </ElButton>
+        </template>
+      </ElTableColumn>
+    </ElTable>
+    <ElEmpty v-else description="No domain rules configured" />
+  </ElCard>
 </template>
 
 <script setup lang="ts">
+import {
+	ElButton,
+	ElCard,
+	ElCheckbox,
+	ElEmpty,
+	ElForm,
+	ElFormItem,
+	ElInput,
+	ElTable,
+	ElTableColumn,
+	ElTag,
+	ElText,
+} from 'element-plus';
 import { computed, reactive, ref } from 'vue';
 import type { DomainRule, NewDomainRule } from '../../types/api';
-import Card from '../Card.vue';
 
 interface Props {
 	domainRules: DomainRule[];
@@ -111,105 +128,12 @@ const handleAddRule = () => {
   margin-bottom: 24px;
 }
 
-.form-group {
-  margin-bottom: 12px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.validation-error {
-  color: var(--error-text);
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.is-invalid {
-  border-color: var(--error-text) !important;
-}
-
 .help-text {
   display: block;
-  font-size: 12px;
-  color: var(--text-secondary);
   margin-top: 4px;
 }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.checkbox-label input[type='checkbox'] {
-  width: auto;
-}
-
-.empty {
-  text-align: center;
-  padding: 32px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
-
-.list {
-  margin-top: 16px;
-}
-
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 12px;
-  background: var(--bg-primary);
-  transition: all 0.2s ease;
-}
-
-.list-item:hover {
-  border-color: var(--text-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-.list-item-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.list-item-id {
-  font-size: 13px;
-  font-family: monospace;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.rule-reason {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.badge {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: #3b82f6;
-  color: white;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.rules-table {
+  margin-top: 24px;
 }
 </style>

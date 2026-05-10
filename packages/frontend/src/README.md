@@ -7,7 +7,7 @@ A modern Vue 3 + Vite frontend for the ActivityPub Relay server.
 - 📱 Responsive design that works on desktop, tablet, and mobile
 - 🌙 Dark/Light theme toggle with localStorage persistence
 - ⚡ Fast development with Vite hot reload
-- 🎨 Clean, modern UI with CSS custom properties
+- 🎨 Clean, modern UI with Element Plus
 - 🔧 API integration with TypeScript support
 - 📦 Reusable Vue 3 components
 
@@ -22,9 +22,10 @@ src/frontend/
 │   └── client.ts        # API client for backend communication
 ├── components/
 │   ├── NavBar.vue       # Navigation bar with theme toggle
-│   ├── Footer.vue       # Footer component
-│   ├── Card.vue         # Reusable card component
-│   └── Alert.vue        # Alert/notification component
+│   ├── admin/           # Admin panel sections
+│   ├── Alert.vue        # Alert/notification component
+│   ├── ConfirmationDialog.vue
+│   └── Navbar.vue       # Navigation bar with theme toggle
 ├── composables/
 │   └── useAdmin.ts      # Admin state management
 ├── pages/
@@ -80,24 +81,6 @@ Navigation bar with active route highlighting and theme toggle.
 ```vue
 <NavBar />
 ```
-
-### Card
-Reusable card component for content sections.
-
-```vue
-<Card title="Section Title" variant="default">
-  <template #default>
-    Content goes here
-  </template>
-  <template #footer>
-    Footer actions
-  </template>
-</Card>
-```
-
-Props:
-- `title` (string, optional) - Card header title
-- `variant` (string, optional) - 'default', 'success', 'error', 'warning'
 
 ### Alert
 Alert/notification component.

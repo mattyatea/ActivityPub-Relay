@@ -21,6 +21,7 @@ export function useTheme() {
 	const applyTheme = (dark: boolean) => {
 		document.body.classList.remove('light-mode', 'dark-mode');
 		document.body.classList.add(dark ? 'dark-mode' : 'light-mode');
+		document.documentElement.classList.toggle('dark', dark);
 	};
 
 	return {
