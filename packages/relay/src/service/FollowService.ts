@@ -7,7 +7,11 @@ import type {
 	FollowRequestStatus,
 	ListFollowRequestsResponse,
 } from '@/types/api.ts';
-import { acceptFollow, rejectFollow } from '@/utils/activityPub.ts';
+import {
+	acceptFollow,
+	fetchActorWithCache,
+	rejectFollow,
+} from '@/utils/activityPub.ts';
 import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
 
 /**
@@ -97,8 +101,7 @@ export async function approveFollowRequest(
 		}
 
 		// アクター情報をfetchする
-		const { fetchActor } = await import('@/utils/activityPub.ts');
-		const actorData = await fetchActor(followRequest.actor);
+		const actorData = await fetchActorWithCache(followRequest.actor, env);
 
 		// actorテーブルに追加
 		await db
@@ -191,8 +194,7 @@ export async function rejectFollowRequest(
 		}
 
 		// アクター情報をfetchする
-		const { fetchActor } = await import('@/utils/activityPub.ts');
-		const actorData = await fetchActor(followRequest.actor);
+		const actorData = await fetchActorWithCache(followRequest.actor, env);
 
 		// Reject送信
 		await rejectFollow(activity, actorData.inbox, env);

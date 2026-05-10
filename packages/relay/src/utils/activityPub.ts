@@ -1,16 +1,8 @@
 import type { APActor, APRequest } from '@/types/activityPubTypes.ts';
+import { getCachedActor, setCachedActor } from '@/service/CacheService.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 
 const PUBLIC_COLLECTION = 'https://www.w3.org/ns/activitystreams#Public';
-const ACTOR_CACHE_TTL_MS = 5 * 60 * 1000;
-const ACTOR_CACHE_MAX_SIZE = 128;
-
-type CachedActor = {
-	actor: APActor;
-	expiresAt: number;
-};
-
-const actorCache = new Map<string, CachedActor>();
 
 export const idGenerator = () => {
 	return Date.now().toString();
@@ -97,15 +89,6 @@ export async function sendActivity(
 
 export async function fetchActor(keyId: string): Promise<APActor> {
 	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
-	const now = Date.now();
-
-	const cached = actorCache.get(actorUrl);
-	if (cached && cached.expiresAt > now) {
-		// Refresh LRU order
-		actorCache.delete(actorUrl);
-		actorCache.set(actorUrl, cached);
-		return cached.actor;
-	}
 
 	const response = await fetch(actorUrl, {
 		method: 'GET',
@@ -118,20 +101,20 @@ export async function fetchActor(keyId: string): Promise<APActor> {
 		throw new Error(`Failed to fetch actor: ${response.status}`);
 	}
 
-	const actor = (await response.json()) as APActor;
+	return (await response.json()) as APActor;
+}
 
-	if (actorCache.size >= ACTOR_CACHE_MAX_SIZE) {
-		const oldestKey = actorCache.keys().next().value;
-		if (oldestKey) {
-			actorCache.delete(oldestKey);
-		}
+export async function fetchActorWithCache(
+	keyId: string,
+	env: Env,
+): Promise<APActor> {
+	const cachedActor = await getCachedActor(env, keyId);
+	if (cachedActor) {
+		return cachedActor;
 	}
 
-	actorCache.set(actorUrl, {
-		actor,
-		expiresAt: now + ACTOR_CACHE_TTL_MS,
-	});
-
+	const actor = await fetchActor(keyId);
+	await setCachedActor(env, keyId, actor);
 	return actor;
 }
 

@@ -8,7 +8,7 @@ import type { APActivity, APActor } from '@/types/activityPubTypes.ts';
 import {
 	acceptFollow,
 	checkPublicCollection,
-	fetchActor,
+	fetchActorWithCache,
 } from '@/utils/activityPub.ts';
 import {
 	extractDomainFromActorId,
@@ -45,7 +45,7 @@ export const followActivity = async (
 		try {
 			let followerRecord = actor;
 			if (actor.id !== activity.actor) {
-				followerRecord = await fetchActor(activity.actor);
+				followerRecord = await fetchActorWithCache(activity.actor, context.env);
 			}
 
 			// ドメインブロックチェック
