@@ -1,58 +1,58 @@
 <template>
-  <MainLayout currentPage="admin">
-    <div class="admin">
-      <ElPageHeader title="" content="Admin Panel" class="page-header" />
+	<MainLayout currentPage="admin">
+		<div class="admin">
+			<ElPageHeader title="" content="Admin Panel" class="page-header" />
 
-      <Alert
-        v-if="alertMessage"
-        :message="alertMessage"
-        :type="alertType"
-        :autoDismiss="true"
-      />
+			<Alert
+				v-if="alertMessage"
+				:message="alertMessage"
+				:type="alertType"
+				:autoDismiss="true"
+			/>
 
-      <!-- Authentication Section -->
-      <AuthSection
-        :apiKey="apiKey"
-        :authenticated="authenticated"
-        :loading="loading"
-        @connect="handleConnect"
-        @logout="handleLogout"
-      />
+			<!-- Authentication Section -->
+			<AuthSection
+				:apiKey="apiKey"
+				:authenticated="authenticated"
+				:loading="loading"
+				@connect="handleConnect"
+				@logout="handleLogout"
+			/>
 
-      <!-- Settings Section -->
-      <SettingsSection
-        v-if="authenticated"
-        :settings="settings"
-        :saving="savingSettings"
-        @save="handleUpdateSettings"
-      />
+			<!-- Settings Section -->
+			<SettingsSection
+				v-if="authenticated"
+				:settings="settings"
+				:saving="savingSettings"
+				@save="handleUpdateSettings"
+			/>
 
-      <!-- Follow Requests Section -->
-      <FollowRequestsSection
-        v-if="authenticated"
-        :followRequests="followRequests"
-        @approve="handleApproveFollow"
-        @reject="handleRejectFollow"
-      />
+			<!-- Follow Requests Section -->
+			<FollowRequestsSection
+				v-if="authenticated"
+				:followRequests="followRequests"
+				@approve="handleApproveFollow"
+				@reject="handleRejectFollow"
+			/>
 
-      <!-- Delivery Servers Section -->
-      <DeliveryServersSection
-        v-if="authenticated"
-        :actors="actors"
-        :actorTotal="actorTotal"
-        @removeActor="handleRemoveActor"
-      />
+			<!-- Delivery Servers Section -->
+			<DeliveryServersSection
+				v-if="authenticated"
+				:actors="actors"
+				:actorTotal="actorTotal"
+				@removeActor="handleRemoveActor"
+			/>
 
-      <!-- Domain Rules Section -->
-      <DomainRulesSection
-        v-if="authenticated"
-        :domainRules="domainRules"
-        :adding="addingRule"
-        @add="handleAddRule"
-        @delete="handleDeleteRule"
-      />
-    </div>
-  </MainLayout>
+			<!-- Domain Rules Section -->
+			<DomainRulesSection
+				v-if="authenticated"
+				:domainRules="domainRules"
+				:adding="addingRule"
+				@add="handleAddRule"
+				@delete="handleDeleteRule"
+			/>
+		</div>
+	</MainLayout>
 </template>
 
 <script setup lang="ts">
@@ -290,22 +290,21 @@ const handleRemoveActor = async (actorId: string) => {
 
 <style scoped>
 .admin {
-  width: 800px;
-  max-width: calc(100vw - 40px);
-  margin: 0 auto;
-  padding: 32px 20px;
+	width: 800px;
+	max-width: calc(100vw - 40px);
+	margin: 0 auto;
+	padding: 32px 20px;
 }
 
 .page-header {
-  margin-bottom: 24px;
+	margin-bottom: 24px;
 }
 
 @media (max-width: 768px) {
-  .admin {
-    width: 100%;
-    max-width: calc(100vw - 32px);
-    padding: 20px 16px;
-  }
-
+	.admin {
+		width: 100%;
+		max-width: calc(100vw - 32px);
+		padding: 20px 16px;
+	}
 }
 </style>

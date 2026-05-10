@@ -1,10 +1,10 @@
 <template>
-  <div class="app">
-    <Navbar :currentPage="currentPage" />
-    <ElMain class="container">
-      <slot />
-    </ElMain>
-  </div>
+	<div class="app">
+		<Navbar :currentPage="currentPage" />
+		<ElMain class="container">
+			<slot />
+		</ElMain>
+	</div>
 </template>
 
 <script setup lang="ts">
@@ -22,12 +22,12 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
 }
 
 .container {
-  flex: 1;
+	flex: 1;
 }
 </style>

@@ -147,6 +147,7 @@ pnpm dev
 ```
 
 これにより以下が起動します:
+
 - バックエンド: http://localhost:3000
 - フロントエンド: http://localhost:5173
 
@@ -186,9 +187,9 @@ pnpm db:migrate       # ローカルマイグレーション
 pnpm db:migrate:prod  # 本番マイグレーション
 
 # コード品質
-pnpm check       # Biomeチェック
-pnpm fix         # 自動修正
-pnpm fix-unsafe  # unsafe fixを含めて修正
+pnpm check       # oxfmt と oxlint のチェック
+pnpm fix         # oxfmt と oxlint の自動修正
+pnpm fix-unsafe  # oxlint の unsafe 修正も含めた自動修正
 ```
 
 ## ライセンス
@@ -350,7 +351,7 @@ pnpm run deploy
 
 #### Code Quality
 
-The project uses Biome for linting and formatting:
+The project uses oxfmt and oxlint for formatting and linting:
 
 ```bash
 # Check code

@@ -16,8 +16,7 @@ export function parseHeader(request: Request): { [key: string]: string } {
 	const params: { [key: string]: string } = {};
 	const paramList = signatureHeader.split(',');
 
-	// biome-ignore lint/suspicious/noExplicitAny: 実際にどんな値が入っていてもおかしくないはず。
-	paramList.forEach((param: any) => {
+	paramList.forEach((param) => {
 		const parts = param.split('=', 2);
 		if (parts.length !== 2 || !param) {
 			throw new Error(`Invalid Signature`);

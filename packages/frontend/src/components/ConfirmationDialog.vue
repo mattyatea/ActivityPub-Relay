@@ -1,16 +1,16 @@
 <template>
-  <ElDialog
-    :model-value="isOpen"
-    :title="title"
-    width="min(480px, 90vw)"
-    @close="onCancel"
-  >
-    <p class="dialog-message">{{ message }}</p>
-    <template #footer>
-      <ElButton @click="onCancel">Cancel</ElButton>
-      <ElButton type="primary" @click="onConfirm">Confirm</ElButton>
-    </template>
-  </ElDialog>
+	<ElDialog
+		:model-value="isOpen"
+		:title="title"
+		width="min(480px, 90vw)"
+		@close="onCancel"
+	>
+		<p class="dialog-message">{{ message }}</p>
+		<template #footer>
+			<ElButton @click="onCancel">Cancel</ElButton>
+			<ElButton type="primary" @click="onConfirm">Confirm</ElButton>
+		</template>
+	</ElDialog>
 </template>
 
 <script setup lang="ts">
@@ -41,7 +41,7 @@ const onCancel = () => {
 
 <style scoped>
 .dialog-message {
-  margin: 0;
-  line-height: 1.5;
+	margin: 0;
+	line-height: 1.5;
 }
 </style>

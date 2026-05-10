@@ -1,39 +1,59 @@
 <template>
-  <ElCard class="section" shadow="hover">
-    <template #header>Delivery Servers</template>
-    <ElEmpty v-if="actors.length === 0" description="No servers currently being delivered to" />
-    <template v-else>
-      <ElTable :data="actors" style="width: 100%">
-        <ElTableColumn label="Domain" min-width="180">
-          <template #default="{ row }">
-            {{ extractDomain(row.id) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn prop="inbox" label="Inbox" min-width="320" show-overflow-tooltip />
-        <ElTableColumn label="Actions" width="120" align="right">
-          <template #default="{ row }">
-            <ElButton type="danger" size="small" plain @click="handleRemove(row.id)">
-              Remove
-            </ElButton>
-          </template>
-        </ElTableColumn>
-      </ElTable>
-      <ElText v-if="actorTotal > actors.length" class="list-footer" type="info">
-        Showing {{ actors.length }} of {{ actorTotal }} servers
-      </ElText>
-    </template>
-    <ConfirmationDialog
-      :isOpen="showConfirmDialog"
-      title="Remove Delivery Server"
-      :message="`Are you sure you want to remove ${extractDomain(actorToRemove || '')}? A Reject activity will be sent to this server.`"
-      @confirm="confirmRemove"
-      @cancel="cancelRemove"
-    />
-  </ElCard>
+	<ElCard class="section" shadow="hover">
+		<template #header>Delivery Servers</template>
+		<ElEmpty
+			v-if="actors.length === 0"
+			description="No servers currently being delivered to"
+		/>
+		<template v-else>
+			<ElTable :data="actors" style="width: 100%">
+				<ElTableColumn label="Domain" min-width="180">
+					<template #default="{ row }">
+						{{ extractDomain(row.id) }}
+					</template>
+				</ElTableColumn>
+				<ElTableColumn
+					prop="inbox"
+					label="Inbox"
+					min-width="320"
+					show-overflow-tooltip
+				/>
+				<ElTableColumn label="Actions" width="120" align="right">
+					<template #default="{ row }">
+						<ElButton
+							type="danger"
+							size="small"
+							plain
+							@click="handleRemove(row.id)"
+						>
+							Remove
+						</ElButton>
+					</template>
+				</ElTableColumn>
+			</ElTable>
+			<ElText v-if="actorTotal > actors.length" class="list-footer" type="info">
+				Showing {{ actors.length }} of {{ actorTotal }} servers
+			</ElText>
+		</template>
+		<ConfirmationDialog
+			:isOpen="showConfirmDialog"
+			title="Remove Delivery Server"
+			:message="`Are you sure you want to remove ${extractDomain(actorToRemove || '')}? A Reject activity will be sent to this server.`"
+			@confirm="confirmRemove"
+			@cancel="cancelRemove"
+		/>
+	</ElCard>
 </template>
 
 <script setup lang="ts">
-import { ElButton, ElCard, ElEmpty, ElTable, ElTableColumn, ElText } from 'element-plus';
+import {
+	ElButton,
+	ElCard,
+	ElEmpty,
+	ElTable,
+	ElTableColumn,
+	ElText,
+} from 'element-plus';
 import { ref } from 'vue';
 import type { Actor } from '../../types/api';
 import ConfirmationDialog from '../ConfirmationDialog.vue';
@@ -82,12 +102,12 @@ const extractDomain = (url: string): string => {
 
 <style scoped>
 .section {
-  margin-bottom: 24px;
+	margin-bottom: 24px;
 }
 
 .list-footer {
-  display: block;
-  margin-top: 12px;
-  text-align: center;
+	display: block;
+	margin-top: 12px;
+	text-align: center;
 }
 </style>

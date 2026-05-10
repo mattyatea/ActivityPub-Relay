@@ -59,7 +59,7 @@ async function settleDeliveries(
 	recipients: DeliveryRecipient[],
 	deliver: (recipient: DeliveryRecipient) => Promise<void>,
 ): Promise<PromiseSettledResult<void>[]> {
-	const results = new Array<PromiseSettledResult<void>>(recipients.length);
+	const results: PromiseSettledResult<void>[] = [];
 	let nextIndex = 0;
 
 	async function worker() {

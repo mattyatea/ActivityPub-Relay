@@ -2,23 +2,24 @@
 	"name": "activitypub-relay-monorepo",
 	"version": "0.0.1",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "concurrently \"pnpm --filter relay dev\" \"pnpm --filter frontend dev\"",
 		"dev:relay": "pnpm --filter relay dev",
 		"dev:frontend": "pnpm --filter frontend dev",
 		"build": "pnpm --filter frontend build",
 		"deploy": "pnpm build && pnpm --filter relay run deploy",
-		"check": "biome check",
-		"fix": "biome check --write",
-		"fix-unsafe": "biome check --write --unsafe",
+		"check": "oxlint . && oxfmt --check .",
+		"fix": "oxlint --fix . && oxfmt --write .",
+		"fix-unsafe": "oxlint --fix-suggestions --fix-dangerously . && oxfmt --write .",
 		"db:generate": "pnpm --filter relay db:generate",
 		"db:migrate": "pnpm --filter relay db:migrate",
 		"db:migrate:prod": "pnpm --filter relay db:migrate:prod"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.15",
 		"concurrently": "^9.2.1",
+		"oxfmt": "^0.48.0",
+		"oxlint": "^1.63.0",
 		"typescript": "^6.0.3"
-	},
-	"type": "module"
+	}
 }

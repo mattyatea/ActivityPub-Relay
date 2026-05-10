@@ -1,13 +1,13 @@
 <template>
-  <ElAlert
-    v-if="visible"
-    class="app-alert"
-    :title="message"
-    :type="type"
-    :closable="closeable"
-    show-icon
-    @close="close"
-  />
+	<ElAlert
+		v-if="visible"
+		class="app-alert"
+		:title="message"
+		:type="type"
+		:closable="closeable"
+		show-icon
+		@close="close"
+	/>
 </template>
 
 <script setup lang="ts">
@@ -51,6 +51,6 @@ onMounted(() => {
 
 <style scoped>
 .app-alert {
-  margin-bottom: 24px;
+	margin-bottom: 24px;
 }
 </style>

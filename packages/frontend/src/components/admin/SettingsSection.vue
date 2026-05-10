@@ -1,22 +1,35 @@
 <template>
-  <ElCard class="section" shadow="hover">
-    <template #header>Settings</template>
-    <ElForm label-position="top" @submit.prevent>
-      <ElFormItem label="Domain Block Mode">
-        <ElSelect v-model="localSettings.domainBlockMode">
-          <ElOption label="Whitelist (only allow listed domains)" value="whitelist" />
-          <ElOption label="Blacklist (block listed domains)" value="blacklist" />
-        </ElSelect>
-      </ElFormItem>
-      <ElButton type="primary" :loading="saving" @click="handleSave">
-        Save Settings
-      </ElButton>
-    </ElForm>
-  </ElCard>
+	<ElCard class="section" shadow="hover">
+		<template #header>Settings</template>
+		<ElForm label-position="top" @submit.prevent>
+			<ElFormItem label="Domain Block Mode">
+				<ElSelect v-model="localSettings.domainBlockMode">
+					<ElOption
+						label="Whitelist (only allow listed domains)"
+						value="whitelist"
+					/>
+					<ElOption
+						label="Blacklist (block listed domains)"
+						value="blacklist"
+					/>
+				</ElSelect>
+			</ElFormItem>
+			<ElButton type="primary" :loading="saving" @click="handleSave">
+				Save Settings
+			</ElButton>
+		</ElForm>
+	</ElCard>
 </template>
 
 <script setup lang="ts">
-import { ElButton, ElCard, ElForm, ElFormItem, ElOption, ElSelect } from 'element-plus';
+import {
+	ElButton,
+	ElCard,
+	ElForm,
+	ElFormItem,
+	ElOption,
+	ElSelect,
+} from 'element-plus';
 import { ref, watch } from 'vue';
 import type { Settings } from '../../types/api';
 
@@ -49,6 +62,6 @@ const handleSave = () => {
 
 <style scoped>
 .section {
-  margin-bottom: 24px;
+	margin-bottom: 24px;
 }
 </style>

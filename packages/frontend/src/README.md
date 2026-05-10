@@ -76,6 +76,7 @@ pnpm run preview
 ## Components
 
 ### NavBar
+
 Navigation bar with active route highlighting and theme toggle.
 
 ```vue
@@ -83,6 +84,7 @@ Navigation bar with active route highlighting and theme toggle.
 ```
 
 ### Alert
+
 Alert/notification component.
 
 ```vue
@@ -90,6 +92,7 @@ Alert/notification component.
 ```
 
 Props:
+
 - `message` (string, required) - Alert message
 - `type` (string, optional) - 'success', 'error', 'warning', 'info' (default: 'info')
 - `closeable` (boolean, optional) - Show close button (default: true)
@@ -97,24 +100,25 @@ Props:
 ## Composables
 
 ### useAdmin
+
 State management for admin panel with API integration.
 
 ```typescript
 const {
-  apiKey,
-  authenticated,
-  loading,
-  followRequests,
-  domainRules,
-  settings,
-  authenticate,
-  loadData,
-  approveFollow,
-  rejectFollow,
-  addRule,
-  deleteRule,
-  updateSettings,
-} = useAdmin()
+	apiKey,
+	authenticated,
+	loading,
+	followRequests,
+	domainRules,
+	settings,
+	authenticate,
+	loadData,
+	approveFollow,
+	rejectFollow,
+	addRule,
+	deleteRule,
+	updateSettings,
+} = useAdmin();
 ```
 
 ## API Integration
@@ -122,22 +126,22 @@ const {
 The frontend communicates with the backend via the `apiClient`:
 
 ```typescript
-import apiClient from '@/api/client'
+import apiClient from '@/api/client';
 
 // Authenticate
-apiClient.setApiKey('your-api-key')
+apiClient.setApiKey('your-api-key');
 
 // Get follow requests
-const requests = await apiClient.getFollowRequests()
+const requests = await apiClient.getFollowRequests();
 
 // Approve a follow request
-await apiClient.approveFollowRequest(id)
+await apiClient.approveFollowRequest(id);
 
 // Get domain rules
-const rules = await apiClient.getDomainRules()
+const rules = await apiClient.getDomainRules();
 
 // Add a domain rule
-await apiClient.createDomainRule({ domain: 'example.com', type: 'whitelist' })
+await apiClient.createDomainRule({ domain: 'example.com', type: 'whitelist' });
 ```
 
 ## Styling
@@ -146,21 +150,23 @@ The app uses CSS custom properties (variables) for theming:
 
 ```css
 :root {
-  --bg-primary: #f5f7fa;
-  --bg-secondary: #ffffff;
-  --text-primary: #2d3748;
-  --button-primary: #4299e1;
-  /* ... more variables */
+	--bg-primary: #f5f7fa;
+	--bg-secondary: #ffffff;
+	--text-primary: #2d3748;
+	--button-primary: #4299e1;
+	/* ... more variables */
 }
 ```
 
 Theme is automatically switched between light and dark modes based on:
+
 1. Saved preference in localStorage
 2. System preference if no saved preference
 
 ## Pages
 
 ### Home Page
+
 - Landing page with relay information
 - Feature highlights
 - Getting started guide
@@ -168,6 +174,7 @@ Theme is automatically switched between light and dark modes based on:
 - Server statistics (when available)
 
 ### Admin Panel
+
 - API key authentication
 - Follow request management (approve/reject)
 - Domain rule management (add/delete)
@@ -183,13 +190,17 @@ Theme is automatically switched between light and dark modes based on:
 ## Development Tips
 
 ### Hot Module Replacement (HMR)
+
 Vite provides automatic hot reload during development. Changes to Vue components will be reflected immediately without page refresh.
 
 ### TypeScript
+
 All code uses TypeScript for type safety. Make sure to maintain type definitions when adding new features.
 
 ### Linting
-Run the biome linter:
+
+Run the oxfmt/oxlint tooling:
+
 ```bash
 pnpm run check
 pnpm run fix
@@ -200,6 +211,7 @@ pnpm run fix
 The frontend is built as a static SPA and should be served from the `/public` directory. The Vite build output goes to `public/dist/`.
 
 For production deployment:
+
 1. Run `pnpm run build:frontend`
 2. Serve the contents of `public/` directory via your web server or CDN
 3. Ensure all static assets are properly cached
