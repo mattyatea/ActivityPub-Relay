@@ -1,6 +1,4 @@
 import type { Context } from 'hono';
-import { actors } from '@/db/schema.ts';
-import { createDb } from '@/lib/db.ts';
 import type { AppEnv } from '@/middleware/requestLogging.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
 import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
@@ -18,6 +16,12 @@ type DeliveryRecipient = {
 type DeliveryRecipientMemo = {
 	expiresAt: number;
 	recipients: DeliveryRecipient[];
+};
+
+type ActorDeliveryRow = {
+	id: string;
+	inbox: string;
+	sharedInbox: string | null;
 };
 
 let deliveryRecipientMemo: DeliveryRecipientMemo | null = null;
@@ -53,15 +57,11 @@ async function loadDeliveryRecipients(
 	env: Env,
 	startedAt: number,
 ): Promise<DeliveryRecipient[]> {
-	const db = createDb(env.DB);
 	// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
-	const followers = await db
-		.select({
-			id: actors.id,
-			inbox: actors.inbox,
-			sharedInbox: actors.sharedInbox,
-		})
-		.from(actors);
+	const session = env.DB.withSession('first-unconstrained');
+	const { results: followers } = await session
+		.prepare('select "id", "inbox", "sharedInbox" from "actors"')
+		.all<ActorDeliveryRow>();
 
 	const recipientsByInbox = new Map<string, DeliveryRecipient>();
 	for (const follower of followers) {
