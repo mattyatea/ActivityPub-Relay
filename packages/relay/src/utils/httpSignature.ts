@@ -1,4 +1,7 @@
 import { createHash, createSign, createVerify } from 'node:crypto';
+import { eq } from 'drizzle-orm';
+import { actors } from '@/db/schema.ts';
+import { createDb } from '@/lib/db.ts';
 import type { APActor } from '@/types/activityPubTypes.ts';
 import { fetchActor } from '@/utils/activityPub.ts';
 
@@ -54,6 +57,7 @@ export function parseHeader(request: Request): { [key: string]: string } {
 
 export async function verifySignature(
 	req: Request,
+	env: Env,
 ): Promise<SignatureVerificationResult> {
 	const header = parseHeader(req);
 	const keyId = header.keyId;
@@ -64,7 +68,7 @@ export async function verifySignature(
 		throw new Error('Signature headers missing');
 	}
 
-	const actor = await fetchActor(keyId);
+	const actor = await getTrustedActor(keyId, env);
 	const publicKey = actor.publicKey?.publicKeyPem;
 	if (!publicKey) {
 		throw new Error('Actor public key missing');
@@ -95,6 +99,34 @@ export async function verifySignature(
 		isValid,
 		actor,
 	};
+}
+
+async function getTrustedActor(keyId: string, env: Env): Promise<APActor> {
+	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
+	const db = createDb(env.DB);
+	const storedActor = await db
+		.select()
+		.from(actors)
+		.where(eq(actors.id, actorUrl))
+		.get();
+
+	if (storedActor?.publicKey) {
+		return {
+			'@context': ['https://www.w3.org/ns/activitystreams'],
+			id: storedActor.id,
+			inbox: storedActor.inbox,
+			endpoints: storedActor.sharedInbox
+				? { sharedInbox: storedActor.sharedInbox }
+				: undefined,
+			publicKey: {
+				id: keyId,
+				owner: storedActor.id,
+				publicKeyPem: storedActor.publicKey,
+			},
+		};
+	}
+
+	return await fetchActor(keyId);
 }
 
 // Cache for normalized private key to avoid repeated string operations

@@ -6,12 +6,8 @@ export type DeliveryRecipient = {
 	inbox: string;
 };
 
-type DeliveryCacheEnv = Env & {
-	DELIVERY_CACHE?: KVNamespace;
-};
-
 function getDeliveryKvCache(env: Env): KVNamespace | undefined {
-	return (env as DeliveryCacheEnv).DELIVERY_CACHE;
+	return env.DELIVERY_CACHE;
 }
 
 export async function getCachedDeliveryRecipients(
