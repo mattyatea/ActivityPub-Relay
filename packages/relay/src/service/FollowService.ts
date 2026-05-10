@@ -11,6 +11,7 @@ import {
 	acceptFollow,
 	fetchActorWithCache,
 	rejectFollow,
+	type WaitUntilContext,
 } from '@/utils/activityPub.ts';
 import { createServiceLogger, sanitizeError } from '@/utils/logger.ts';
 
@@ -59,6 +60,7 @@ export async function listFollowRequests(
 export async function approveFollowRequest(
 	followRequestId: string,
 	env: Env,
+	executionCtx?: WaitUntilContext,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
 	const db = createDb(env.DB);
@@ -101,7 +103,10 @@ export async function approveFollowRequest(
 		}
 
 		// アクター情報をfetchする
-		const actorData = await fetchActorWithCache(followRequest.actor, env);
+		const actorData = await fetchActorWithCache(
+			followRequest.actor,
+			executionCtx,
+		);
 
 		// actorテーブルに追加
 		await db
@@ -154,6 +159,7 @@ export async function approveFollowRequest(
 export async function rejectFollowRequest(
 	followRequestId: string,
 	env: Env,
+	executionCtx?: WaitUntilContext,
 ): Promise<boolean> {
 	const logger = createServiceLogger('FollowService');
 	const db = createDb(env.DB);
@@ -194,7 +200,10 @@ export async function rejectFollowRequest(
 		}
 
 		// アクター情報をfetchする
-		const actorData = await fetchActorWithCache(followRequest.actor, env);
+		const actorData = await fetchActorWithCache(
+			followRequest.actor,
+			executionCtx,
+		);
 
 		// Reject送信
 		await rejectFollow(activity, actorData.inbox, env);

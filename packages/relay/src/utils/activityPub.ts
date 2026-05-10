@@ -1,8 +1,12 @@
 import type { APActor, APRequest } from '@/types/activityPubTypes.ts';
-import { getCachedActor, setCachedActor } from '@/service/CacheService.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 
 const PUBLIC_COLLECTION = 'https://www.w3.org/ns/activitystreams#Public';
+const ACTOR_CACHE_TTL_SECONDS = 24 * 60 * 60;
+
+export type WaitUntilContext = {
+	waitUntil(promise: Promise<unknown>): void;
+};
 
 export const idGenerator = () => {
 	return Date.now().toString();
@@ -106,15 +110,32 @@ export async function fetchActor(keyId: string): Promise<APActor> {
 
 export async function fetchActorWithCache(
 	keyId: string,
-	env: Env,
+	executionCtx?: WaitUntilContext,
 ): Promise<APActor> {
-	const cachedActor = await getCachedActor(env, keyId);
-	if (cachedActor) {
-		return cachedActor;
+	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
+	const cache = (caches as CacheStorage & { default: Cache }).default;
+	const cacheKey = new Request(actorUrl, {
+		headers: { Accept: 'application/activity+json, application/ld+json' },
+	});
+	const cachedResponse = await cache.match(cacheKey);
+	if (cachedResponse) {
+		return (await cachedResponse.json()) as APActor;
 	}
 
 	const actor = await fetchActor(keyId);
-	await setCachedActor(env, keyId, actor);
+	const cacheResponse = new Response(JSON.stringify(actor), {
+		headers: {
+			'Cache-Control': `public, max-age=${ACTOR_CACHE_TTL_SECONDS}`,
+			'Content-Type': 'application/activity+json',
+		},
+	});
+	const cachePut = cache.put(cacheKey, cacheResponse);
+	if (executionCtx) {
+		executionCtx.waitUntil(cachePut);
+	} else {
+		await cachePut;
+	}
+
 	return actor;
 }
 

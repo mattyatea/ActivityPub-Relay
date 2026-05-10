@@ -45,7 +45,10 @@ export const followActivity = async (
 		try {
 			let followerRecord = actor;
 			if (actor.id !== activity.actor) {
-				followerRecord = await fetchActorWithCache(activity.actor, context.env);
+				followerRecord = await fetchActorWithCache(
+					activity.actor,
+					context.executionCtx,
+				);
 			}
 
 			// ドメインブロックチェック

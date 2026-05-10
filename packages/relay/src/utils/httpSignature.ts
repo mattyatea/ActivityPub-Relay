@@ -1,6 +1,9 @@
 import { createHash, createSign, createVerify } from 'node:crypto';
 import type { APActor } from '@/types/activityPubTypes.ts';
-import { fetchActorWithCache } from '@/utils/activityPub.ts';
+import {
+	fetchActorWithCache,
+	type WaitUntilContext,
+} from '@/utils/activityPub.ts';
 
 export type SignatureVerificationResult = {
 	isValid: boolean;
@@ -54,7 +57,7 @@ export function parseHeader(request: Request): { [key: string]: string } {
 
 export async function verifySignature(
 	req: Request,
-	env: Env,
+	executionCtx?: WaitUntilContext,
 ): Promise<SignatureVerificationResult> {
 	const header = parseHeader(req);
 	const keyId = header.keyId;
@@ -65,7 +68,7 @@ export async function verifySignature(
 		throw new Error('Signature headers missing');
 	}
 
-	const actor = await fetchActorWithCache(keyId, env);
+	const actor = await fetchActorWithCache(keyId, executionCtx);
 	const publicKey = actor.publicKey?.publicKeyPem;
 	if (!publicKey) {
 		throw new Error('Actor public key missing');

@@ -112,7 +112,7 @@ app.post('/inbox', async (c) => {
 
 	let verificationResult: SignatureVerificationResult;
 	try {
-		verificationResult = await verifySignature(c.req.raw, c.env);
+		verificationResult = await verifySignature(c.req.raw, c.executionCtx);
 	} catch (error) {
 		addRequestLogContext(c, {
 			errorCode: 'signature_verification_error',

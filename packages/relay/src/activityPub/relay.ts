@@ -8,7 +8,11 @@ import {
 	setCachedDeliveryRecipients,
 } from '@/service/CacheService.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
-import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
+import {
+	checkPublicCollection,
+	sendActivity,
+	type WaitUntilContext,
+} from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
@@ -22,7 +26,10 @@ const safeHostname = (value: string) => {
 	}
 };
 
-async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
+async function getDeliveryRecipients(
+	env: Env,
+	executionCtx?: WaitUntilContext,
+): Promise<DeliveryRecipient[]> {
 	const cachedRecipients = await getCachedDeliveryRecipients(env);
 	if (cachedRecipients) {
 		return cachedRecipients;
@@ -50,7 +57,12 @@ async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
 	}
 
 	const recipients = Array.from(recipientsByInbox.values());
-	await setCachedDeliveryRecipients(env, recipients);
+	const cachePut = setCachedDeliveryRecipients(env, recipients);
+	if (executionCtx) {
+		executionCtx.waitUntil(cachePut);
+	} else {
+		await cachePut;
+	}
 
 	return recipients;
 }
@@ -129,7 +141,10 @@ export const relayActivity = async (
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
-	const deliveryRecipients = await getDeliveryRecipients(context.env);
+	const deliveryRecipients = await getDeliveryRecipients(
+		context.env,
+		context.executionCtx,
+	);
 
 	if (deliveryRecipients.length === 0) {
 		logger.info('No followers registered, skipping relay', {

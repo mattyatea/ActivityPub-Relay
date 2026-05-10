@@ -1,8 +1,5 @@
-import type { APActor } from '@/types/activityPubTypes.ts';
-
 const DELIVERY_RECIPIENT_CACHE_TTL_SECONDS = 60;
 const DELIVERY_RECIPIENT_CACHE_KEY = 'delivery:recipients';
-const ACTOR_CACHE_KEY_PREFIX = 'actor:';
 
 export type DeliveryRecipient = {
 	actorHost: string | null;
@@ -11,36 +8,6 @@ export type DeliveryRecipient = {
 
 function getDeliveryKvCache(env: Env): KVNamespace | undefined {
 	return env.DELIVERY_CACHE;
-}
-
-function getActorCacheKey(keyId: string): string {
-	const actorUrl = keyId.includes('#') ? keyId.split('#', 1)[0] : keyId;
-	return `${ACTOR_CACHE_KEY_PREFIX}${actorUrl}`;
-}
-
-export async function getCachedActor(
-	env: Env,
-	keyId: string,
-): Promise<APActor | null> {
-	const kvCache = getDeliveryKvCache(env);
-	if (!kvCache) {
-		return null;
-	}
-
-	return await kvCache.get<APActor>(getActorCacheKey(keyId), 'json');
-}
-
-export async function setCachedActor(
-	env: Env,
-	keyId: string,
-	actor: APActor,
-): Promise<void> {
-	const kvCache = getDeliveryKvCache(env);
-	if (!kvCache) {
-		return;
-	}
-
-	await kvCache.put(getActorCacheKey(keyId), JSON.stringify(actor));
 }
 
 export async function getCachedDeliveryRecipients(
