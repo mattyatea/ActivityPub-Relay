@@ -8,11 +8,20 @@ import { signHeaders } from '@/utils/httpSignature.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
 const DELIVERY_CONCURRENCY = 12;
+const DELIVERY_RECIPIENT_MEMO_TTL_MS = 5_000;
 
 type DeliveryRecipient = {
 	actorHost: string | null;
 	inbox: string;
 };
+
+type DeliveryRecipientMemo = {
+	expiresAt: number;
+	recipients: DeliveryRecipient[];
+};
+
+let deliveryRecipientMemo: DeliveryRecipientMemo | null = null;
+let deliveryRecipientMemoRefresh: Promise<DeliveryRecipient[]> | null = null;
 
 const safeHostname = (value: string) => {
 	try {
@@ -23,6 +32,27 @@ const safeHostname = (value: string) => {
 };
 
 async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
+	const now = Date.now();
+	if (deliveryRecipientMemo && deliveryRecipientMemo.expiresAt > now) {
+		return deliveryRecipientMemo.recipients;
+	}
+
+	if (deliveryRecipientMemoRefresh) {
+		return await deliveryRecipientMemoRefresh;
+	}
+
+	deliveryRecipientMemoRefresh = loadDeliveryRecipients(env, now);
+	try {
+		return await deliveryRecipientMemoRefresh;
+	} finally {
+		deliveryRecipientMemoRefresh = null;
+	}
+}
+
+async function loadDeliveryRecipients(
+	env: Env,
+	startedAt: number,
+): Promise<DeliveryRecipient[]> {
 	const db = createDb(env.DB);
 	// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
 	const followers = await db
@@ -44,7 +74,13 @@ async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
 		}
 	}
 
-	return Array.from(recipientsByInbox.values());
+	const recipients = Array.from(recipientsByInbox.values());
+	deliveryRecipientMemo = {
+		expiresAt: startedAt + DELIVERY_RECIPIENT_MEMO_TTL_MS,
+		recipients,
+	};
+
+	return recipients;
 }
 
 async function settleDeliveries(
@@ -92,9 +128,9 @@ async function settleDeliveries(
  * @param activity - 受信したCreate/Announce Activity
  * @param context - Honoのコンテキスト（環境変数とD1データベースへのアクセスを含む）
  * @returns {Promise<{success: boolean; relayedCount: number; failureCount: number}>}
- *   - success: リレー処理が成功したかどうか
- *   - relayedCount: 正常に配信できたフォロワー数
- *   - failureCount: 配信に失敗したフォロワー数
+ *   - success: リレー配信をスケジュールできたかどうか
+ *   - relayedCount: 配信対象としてスケジュールしたフォロワー数
+ *   - failureCount: 同期処理中に判明した失敗数
  *
  * @remarks
  * - アクティビティがpublicコレクション宛でない場合は配信しません
@@ -143,36 +179,46 @@ export const relayActivity = async (
 	// Stringify activity once and reuse for all deliveries
 	const activityJson = JSON.stringify(activity);
 
-	const deliveries = await settleDeliveries(recipients, async (recipient) => {
+	const deliveryTask = settleDeliveries(recipients, async (recipient) => {
 		const headers = signHeaders(activityJson, recipient.inbox, context.env);
 		await sendActivity(recipient.inbox, activity, headers);
-	});
+	})
+		.then((deliveries) => {
+			const failures = deliveries.filter(
+				(result) => result.status === 'rejected',
+			);
+			const relayedCount = deliveries.length - failures.length;
+			const failureCount = failures.length;
 
-	const failures = deliveries.filter((result) => result.status === 'rejected');
-
-	const relayedCount = deliveries.length - failures.length;
-	const failureCount = failures.length;
-
-	if (failures.length > 0) {
-		logger.warn('Some deliveries failed during relay', {
-			activityId: activity.id,
-			totalRecipients: deliveries.length,
-			successCount: relayedCount,
-			failureCount,
-			failureReasons: failures.map((f) =>
-				f.status === 'rejected' ? sanitizeError(f.reason) : null,
-			),
+			if (failures.length > 0) {
+				logger.warn('Some deliveries failed during relay', {
+					activityId: activity.id,
+					totalRecipients: deliveries.length,
+					successCount: relayedCount,
+					failureCount,
+					failureReasons: failures.map((f) =>
+						f.status === 'rejected' ? sanitizeError(f.reason) : null,
+					),
+				});
+			} else {
+				logger.info('Activity relayed successfully to all followers', {
+					activityId: activity.id,
+					recipientCount: relayedCount,
+				});
+			}
+		})
+		.catch((error) => {
+			logger.error('Relay delivery task failed', {
+				activityId: activity.id,
+				...sanitizeError(error),
+			});
 		});
-	} else {
-		logger.info('Activity relayed successfully to all followers', {
-			activityId: activity.id,
-			recipientCount: relayedCount,
-		});
-	}
+
+	context.executionCtx.waitUntil(deliveryTask);
 
 	return {
 		success: true,
-		relayedCount,
-		failureCount,
+		relayedCount: recipients.length,
+		failureCount: 0,
 	};
 };
