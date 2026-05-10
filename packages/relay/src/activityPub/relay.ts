@@ -2,21 +2,17 @@ import type { Context } from 'hono';
 import { actors } from '@/db/schema.ts';
 import { createDb } from '@/lib/db.ts';
 import type { AppEnv } from '@/middleware/requestLogging.ts';
-import {
-	type DeliveryRecipient,
-	getCachedDeliveryRecipients,
-	setCachedDeliveryRecipients,
-} from '@/service/CacheService.ts';
 import type { APActivity } from '@/types/activityPubTypes.ts';
-import {
-	checkPublicCollection,
-	sendActivity,
-	type WaitUntilContext,
-} from '@/utils/activityPub.ts';
+import { checkPublicCollection, sendActivity } from '@/utils/activityPub.ts';
 import { signHeaders } from '@/utils/httpSignature.ts';
 import { createActivityLogger, sanitizeError } from '@/utils/logger.ts';
 
 const DELIVERY_CONCURRENCY = 12;
+
+type DeliveryRecipient = {
+	actorHost: string | null;
+	inbox: string;
+};
 
 const safeHostname = (value: string) => {
 	try {
@@ -26,15 +22,7 @@ const safeHostname = (value: string) => {
 	}
 };
 
-async function getDeliveryRecipients(
-	env: Env,
-	executionCtx?: WaitUntilContext,
-): Promise<DeliveryRecipient[]> {
-	const cachedRecipients = await getCachedDeliveryRecipients(env);
-	if (cachedRecipients) {
-		return cachedRecipients;
-	}
-
+async function getDeliveryRecipients(env: Env): Promise<DeliveryRecipient[]> {
 	const db = createDb(env.DB);
 	// 承認済みフォロワーはactorテーブルに保存されるため、直接取得する
 	const followers = await db
@@ -56,15 +44,7 @@ async function getDeliveryRecipients(
 		}
 	}
 
-	const recipients = Array.from(recipientsByInbox.values());
-	const cachePut = setCachedDeliveryRecipients(env, recipients);
-	if (executionCtx) {
-		executionCtx.waitUntil(cachePut);
-	} else {
-		await cachePut;
-	}
-
-	return recipients;
+	return Array.from(recipientsByInbox.values());
 }
 
 async function settleDeliveries(
@@ -141,10 +121,7 @@ export const relayActivity = async (
 		return { success: false, relayedCount: 0, failureCount: 0 };
 	}
 
-	const deliveryRecipients = await getDeliveryRecipients(
-		context.env,
-		context.executionCtx,
-	);
+	const deliveryRecipients = await getDeliveryRecipients(context.env);
 
 	if (deliveryRecipients.length === 0) {
 		logger.info('No followers registered, skipping relay', {
